@@ -1,50 +1,58 @@
 # Jetski Agent Tracer Plugin
 
 [![Platform: Jetski UI Sidecar](https://img.shields.io/badge/Platform-Jetski_UI_Sidecar-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](#)
-[![Backend: Python 3 Zero-Dep](https://img.shields.io/badge/Backend-Python_3_(Zero--Dep)-3776AB?style=flat-square&logo=python&logoColor=white)](#%EF%B8%8F-how-it-works)
-[![Graph Engine: Vis.js + SVG](https://img.shields.io/badge/Graph_Engine-Vis.js_%2B_SVG_Topology-8E24AA?style=flat-square)](#-3-lane-swimlane-architecture)
-[![Streaming: 1.5s Delta Tail](https://img.shields.io/badge/Streaming-1.5s_Delta_Tail-00897B?style=flat-square)](#2-incremental-tail-polling-serverpy)
-[![Audience: Builders & Non-Coders](https://img.shields.io/badge/Audience-Builders_%26_Non--Coders-F57C00?style=flat-square)](#-visual-node--status-legend)
+[![Backend: Python 3 Zero-Dep](https://img.shields.io/badge/Backend-Python_3_(Zero--Dep)-3776AB?style=flat-square&logo=python&logoColor=white)](#how-it-works)
+[![Graph Engine: Vis.js + SVG](https://img.shields.io/badge/Graph_Engine-Vis.js_%2B_SVG_Topology-8E24AA?style=flat-square)](#3-lane-swimlane-architecture)
+[![Streaming: 1.5s Delta Tail](https://img.shields.io/badge/Streaming-1.5s_Delta_Tail-00897B?style=flat-square)](#how-it-works)
+[![Audience: Builders & Non-Coders](https://img.shields.io/badge/Audience-Builders_%26_Non--Coders-F57C00?style=flat-square)](#visual-node--status-legend)
 
 ![Building Trust Through AI Transparency](assets/hero.png)
 
-A dynamic, LangGraph-style trajectory and architecture visualizer for Jetski. This UI plugin renders an agent's real-time workflow across **Timeline**, **Architecture**, and **Simplified** views—translating raw JSONL logs into plain English so both engineers and non-technical stakeholders can see **what was asked**, **how the agent planned**, **which tools and parallel subagents ran**, **where bottlenecks or errors occurred**, and **what was answered**.
+A dynamic, LangGraph-style trajectory and architecture visualiser for Jetski. This UI plugin renders an agent's real-time workflow across **Timeline**, **Architecture**, and **Simplified** views—translating raw JSONL logs into plain English so both engineers and non-technical stakeholders can see **what was asked**, **how the agent planned**, **which tools and parallel subagents ran**, **where bottlenecks or errors occurred**, and **what was answered**.
 
 ---
 
-## 🚀 Quick Start & Installation
+## Quick Start & Installation
 
 ### 1. Clone the Plugin into Your Jetski Plugins Directory
-Run this in your terminal:
+
+Run the following commands in your terminal:
+
 ```bash
 mkdir -p ~/.gemini/config/plugins
 git clone https://github.com/elim316/Jetski-Agent-Tracer-Plugin.git ~/.gemini/config/plugins/agent-tracer
 ```
 
 ### 2. Enable the Plugin in Jetski
-You can enable `agent-tracer-plugin` in either of two ways:
-- **Via the Settings Menu:** Click the **Settings (gear icon ⚙️)** in Jetski → navigate to **Customizations → Plugins** → find **`agent-tracer-plugin`** and toggle it **ON**.
+
+Enable `agent-tracer-plugin` using either of the following methods:
+
+- **Via the Settings Menu:** Click **Settings** (the gear icon) in Jetski → navigate to **Customizations → Plugins** → locate **`agent-tracer-plugin`** and toggle it **ON**.
 - **Via the `/plugin` Slash Command:** Type `/plugin` in the Jetski chat input (or ask Jetski: *"Enable the `agent-tracer-plugin` plugin"*).
 
 ### 3. Open the Agent Tracer Panel
-Once enabled, open the live visualizer panel using any of these methods:
-- **Top-Right Sidecar / Panel Toggle:** Click the **Sidecar / Auxiliary Panel (`◫`)** button in the top-right header bar of the Jetski window and select the **Agent Tracer** tab.
+
+Once enabled, open the live visualiser panel using any of the following methods:
+
+- **Top-Right Sidecar / Panel Toggle:** Click the **Sidecar / Auxiliary Panel** button in the top-right header bar of the Jetski window and select the **Agent Tracer** tab.
 - **One-Click Chat Pill:** Ask Jetski *"Open Agent Tracer"* (or paste `[Agent Tracer](sidecar://agent-tracer-plugin/tracer/)` in chat) to surface a one-click pill that opens the side panel directly.
 
-### 🔄 Updating
-Agent Tracer includes **built-in self-updating**:
-1. **Automatic Startup Sync:** When the sidecar starts (`server.py`), it checks if your local plugin folder has any uncommitted edits. If the working tree is clean, it automatically fetches and fast-forwards to the latest `origin/main` in the background.
-2. **One-Click `Update (N)` Toolbar Button:** While the panel is open, Agent Tracer periodically checks `origin/main` (`/api/update-status`). Whenever new commits are pushed to GitHub, a green **`Update (N)`** pill appears in the top toolbar with a tooltip previewing the new commit titles. Clicking it updates the repo (`POST /api/update`) and reloads the panel in place.
+### Updating
 
-> [!NOTE]
-> **Manual upgrade command** (if you ever want to force-sync from terminal):
+Agent Tracer includes **built-in self-updating**:
+
+1. **Automatic Startup Sync:** When the sidecar starts (`server.py`), it checks whether your local plugin folder has uncommitted edits. If the working tree is clean, it automatically fetches and fast-forwards to the latest `origin/main` in the background.
+2. **One-Click `Update (N)` Toolbar Button:** While the panel is open, Agent Tracer periodically checks `origin/main` (`/api/update-status`). Whenever new commits are pushed to GitHub, a green **`Update (N)`** pill appears in the top toolbar with a tooltip previewing the new commit titles. Clicking it updates the repository (`POST /api/update`) and reloads the panel in place.
+
+> **NOTE:** To force-sync manually from a terminal, run:
+>
 > ```bash
 > git -C ~/.gemini/config/plugins/agent-tracer fetch origin main && git -C ~/.gemini/config/plugins/agent-tracer reset --hard origin/main
 > ```
 
 ---
 
-## 🗺️ 3-Lane Swimlane Architecture
+## 3-Lane Swimlane Architecture
 
 Every turn in a conversation is grouped into a translucent request band across three locked horizontal lanes (`Y_USER`, `Y_AGENT`, `Y_TOOL`):
 
@@ -62,7 +70,7 @@ flowchart LR
         R1["MAIN AGENT (ROUTER)\nOpening plan & tool selection"]
         SUB1["SUBAGENT [1/2]: Code Researcher\nDelegated investigation"]
         SUB2["SUBAGENT [2/2]: Test Runner\nParallel verification"]
-        R2["MAIN AGENT (ROUTER)\nSynthesizing findings"]
+        R2["MAIN AGENT (ROUTER)\nSynthesising findings"]
         ANS["AGENT REPLY\nFinal user-facing answer"]
     end
 
@@ -100,16 +108,18 @@ flowchart LR
 
 ---
 
-## 🎨 Visual Node & Status Legend
+## Visual Node & Status Legend
+
+The following table summarises each node type, its swimlane placement, and the transcript condition that triggers it:
 
 | Node / Badge | Swimlane | Visual Style | What Triggers It |
 | :--- | :--- | :--- | :--- |
 | **`USER REQUEST`** | Top (`Y_USER`) | Warm Orange (`#FFF3E0` / `#FFB74D`) | Every `USER_INPUT` step, stripped of `<ADDITIONAL_METADATA>` and `<CONTEXT_SUMMARY>` XML wrappers. |
 | **`N hours later`** | Top (`Y_USER`) | Dashed Grey (`#BDC1C6`) | Inserted automatically before a user request when `≥ 6 hours` elapsed since the previous step. |
-| **`MAIN AGENT (ROUTER)`** | Middle (`Y_AGENT`) | Purple (`#F3E5F5` / `#BA68C8`) | `PLANNER_RESPONSE` steps where the agent deliberates (`thinking`) or dispatches `tool_calls`. Centered directly above its child tool calls. |
+| **`MAIN AGENT (ROUTER)`** | Middle (`Y_AGENT`) | Purple (`#F3E5F5` / `#BA68C8`) | `PLANNER_RESPONSE` steps where the agent deliberates (`thinking`) or dispatches `tool_calls`. Centred directly above its child tool calls. |
 | **`AGENT REPLY`** | Middle (`Y_AGENT`) | Emerald (`#E6F4EA` / `#34A853`) | Final `PLANNER_RESPONSE` steps that deliver a user-facing `content` answer with no further tool calls. |
-| **`SUBAGENT [i/M]: <Role>`** | Middle (`Y_AGENT`) | Indigo (`#E8EAF6` / `#7986CB`) | `invoke_subagent` calls. Multi-agent batches (e.g. 5 parallel subagents) fan out vertically in the middle lane and fan back in to the next router step. Double-click to drill into any subagent's own trajectory. |
-| **`TOOL: <name>`** | Bottom (`Y_TOOL`) | Cyan (`#E0F7FA` / `#4DD0E1`) | Completed tool executions paired with their `GENERIC` output step. Steps with `≥ 4` tools arrange in a compact 2-row grid centered under their router. |
+| **`SUBAGENT [i/M]: <Role>`** | Middle (`Y_AGENT`) | Indigo (`#E8EAF6` / `#7986CB`) | `invoke_subagent` calls. Multi-agent batches (for example, 5 parallel subagents) fan out vertically in the middle lane and fan back in to the next router step. Double-click to drill into any subagent's own trajectory. |
+| **`TOOL: <name>`** | Bottom (`Y_TOOL`) | Cyan (`#E0F7FA` / `#4DD0E1`) | Completed tool executions paired with their `GENERIC` output step. Steps with `≥ 4` tools arrange in a compact 2-row grid centred under their router. |
 | **`[+] TOOLS (K)`** | Bottom (`Y_TOOL`) | Dashed Cyan (`#E0F7FA` / `#4DD0E1`) | Collapsed multi-tool bundle when **Collapse Tools** is active (or toggled per step). Click or double-click to expand. |
 | **`RUNNING: <name>`** | Bottom (`Y_TOOL`) | Amber Dashed (`#FEF7E0` / `#F9AB00`) | In-flight tool or subagent calls waiting for their `GENERIC` result step to arrive. |
 | **`FAILED: <name>`** | Bottom (`Y_TOOL`) | Crimson (`#FCE8E6` / `#D93025`) | Tool calls that reported a non-zero exit code, permission denial, or edit failure (`isFailure()`), plus `ERROR_MESSAGE` steps. |
@@ -118,46 +128,49 @@ flowchart LR
 
 ---
 
-## ✨ Features
+## Features
 
-### Three Synchronized Views (`Timeline` · `Architecture` · `Simplified`)
-- **Timeline View:** 3-lane chronological swimlane graph (`Vis.js`) with centered 2-row tool grids, collapsible tool groups, and parallel multi-agent fan-out/fan-in.
-- **Architecture View:** 3-column live system architecture diagram (`I/O Terminals` → `Planner Core` → `5 Capability Clusters & Tools`) with animated RPC particles, execution sequence badges, and up to 9 tool/subagent pills per cluster.
-- **Simplified View:** Executive orbital view showing `User Prompt`, `Agent Output`, `Main Agent Core`, `Tool Set` ring, and `Subagents & Tasks` ring with live animated particles and dark/light theme sync.
+### Three Synchronised Views (`Timeline` · `Architecture` · `Simplified`)
+
+- **Timeline View:** 3-lane chronological swimlane graph (`Vis.js`) with centred 2-row tool grids, collapsible tool groups, and parallel multi-agent fan-out and fan-in.
+- **Architecture View:** 3-column live system architecture diagram (`I/O Terminals` → `Planner Core` → `5 Capability Clusters & Tools`) with animated RPC particles, execution sequence badges, and up to 9 tool or subagent pills per cluster.
+- **Simplified View:** Executive orbital view showing `User Prompt`, `Agent Output`, `Main Agent Core`, `Tool Set` ring, and `Subagents & Tasks` ring with live animated particles and dark/light theme synchronisation.
 
 ### Collapsible Tool Calls & Multi-Agent Fan-Out
+
 - **Collapse Tools Toggle (`Collapse Tools` checkbox & per-step toggle):** Enable **Collapse Tools** in the toolbar to bundle any step with multiple tool calls into a single `[+] TOOLS (K)` node directly beneath its parent router, keeping the horizontal flow compact. You can also **double-click** any router, tool, or `[+] TOOLS (K)` node (or click **Collapse/Expand Tools on Graph** in the right-hand inspector) to expand or collapse tools for a single step on demand.
-- **Parallel Multi-Agent Fan-Out (5+ Subagents):** When `invoke_subagent` launches multiple subagents concurrently, every subagent in `Subagents[]` is rendered as its own `SUBAGENT [i/M]: <Role>` node with vertical fan-out and fan-in edges in **Timeline View**, individual `sub:<Role>` pills in **Architecture View**, and individual orbital chips in **Simplified View**. Double-click any subagent node/pill/chip (or click **Trace Subagent →** in the inspector) to inspect that subagent's full trajectory and navigate back via the session breadcrumb bar.
+- **Parallel Multi-Agent Fan-Out (5+ Subagents):** When `invoke_subagent` launches multiple subagents concurrently, every subagent in `Subagents[]` is rendered as its own `SUBAGENT [i/M]: <Role>` node with vertical fan-out and fan-in edges in **Timeline View**, individual `sub:<Role>` pills in **Architecture View**, and individual orbital chips in **Simplified View**. Double-click any subagent node, pill, or chip (or click **Trace Subagent →** in the inspector) to inspect that subagent's full trajectory and navigate back via the session breadcrumb bar.
 
 ### Reading & Navigating the Trace
+
 - **Plain-English inspector:** Click any node for a human-readable summary of what happened, stripped of internal XML envelopes (`<ADDITIONAL_METADATA>`, `<CONTEXT_SUMMARY>`).
 - **Result summaries & timing:** Every tool result opens with a one-line outcome headline, stat chips, and wall-clock duration. Click **Slow (>10s)** in the Session Overview (or press `s`) to rank the slowest calls.
-- **Browsable failures:** Click **⚠ Issues** (or press `n`) to inspect every failed tool call or agent error with its request number and cause.
-- **Search with match browser:** Filter by tool name, prompt, or thought text (including tools inside collapsed `[+] TOOLS (K)` groups). Step through hits with `‹` `›` or click the hit counter to open the matches drawer.
+- **Browsable failures:** Click **Issues** in the toolbar (or press `n`) to inspect every failed tool call or agent error with its request number and cause.
+- **Search with match browser:** Filter by tool name, prompt, or thought text (including tools inside collapsed `[+] TOOLS (K)` groups). Step through hits with `‹` and `›` or click the hit counter to open the matches drawer.
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
-Press `?` in the top toolbar at any time to open the in-app shortcut legend. Shortcuts are ignored while typing in an input field, and clicking the graph canvas automatically releases focus from the search box.
+Press `?` in the top toolbar at any time to open the in-app shortcut legend. Shortcuts are ignored while typing in an input field, and clicking the graph canvas automatically releases focus from the search box:
 
 | Key | Action |
 | :--- | :--- |
 | <kbd>←</kbd> / <kbd>→</kbd> | Jump to the **previous / next user request** |
 | <kbd>/</kbd> | Focus the **Search trace** box |
-| <kbd>Enter</kbd> / <kbd>⇧</kbd> + <kbd>Enter</kbd> | Step to the **next / previous search match** |
+| <kbd>Enter</kbd> / <kbd>Shift</kbd> + <kbd>Enter</kbd> | Step to the **next / previous search match** |
 | <kbd>Esc</kbd> | Clear the active search filter |
 | <kbd>v</kbd> | Cycle between **Timeline**, **Architecture**, and **Simplified** views |
-| <kbd>i</kbd> | Toggle the right-hand **Inspector Panel (`◫ Panel`)** |
+| <kbd>i</kbd> | Toggle the right-hand **Inspector Panel** |
 | <kbd>n</kbd> | Jump to the **next failed step** on the graph |
 | <kbd>s</kbd> | Open the **Slowest Tool Calls (`≥ 10s`)** panel |
 | <kbd>o</kbd> | Return to the **Session Overview** panel |
-| <kbd>d</kbd> | Toggle **🌙 Dark / ☀️ Light Mode** |
+| <kbd>d</kbd> | Toggle **Dark / Light Mode** |
 | <kbd>?</kbd> | Open the **Keyboard Shortcuts** legend |
 
 ---
 
-## ⚙️ How It Works
+## How It Works
 
 Every time an agent takes a step in Jetski, the runtime appends a JSON record to the conversation's local log (`~/.gemini/jetski/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`). Agent Tracer turns that stream into an interactive visual story in real time:
 
@@ -187,7 +200,9 @@ sequenceDiagram
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
+
+The repository is organised as follows:
 
 ```text
 agent-tracer/
