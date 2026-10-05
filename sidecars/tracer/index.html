@@ -346,7 +346,7 @@
         /* Export dropdown popover */
         .export-wrap { position: relative; display: inline-flex; align-items: center; }
         .export-popover { position: absolute; top: calc(100% + 6px); right: 0; width: 255px; background: var(--card, #ffffff); border: 1px solid var(--border, #cbd5e1); border-radius: 9px; box-shadow: 0 12px 30px rgba(0,0,0,0.22); z-index: 95; padding: 5px; display: flex; flex-direction: column; gap: 2px; }
-        body.dark .export-popover { background: #0f172a; border-color: #334155; box-shadow: 0 14px 36px rgba(0,0,0,0.65); }
+        html[data-theme="dark"] .export-popover { background: #0f172a; border-color: #334155; box-shadow: 0 14px 36px rgba(0,0,0,0.65); }
         .export-popover.hidden { display: none !important; }
         .export-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 7px 10px; border: none; border-radius: 6px; background: transparent; color: var(--foreground, #1e293b); cursor: pointer; font-family: inherit; transition: background 0.12s; }
         .export-item:hover { background: rgba(59,130,246,0.1); }
@@ -354,31 +354,31 @@
         .export-item-sub { font-size: 10.5px; color: var(--muted-foreground, #64748b); }
         /* Colour-coded unified diff view in Inspector */
         .diff-box { border: 1px solid var(--border, #dbe3ee); border-radius: 7px; overflow: hidden; background: var(--card, #ffffff); margin-top: 6px; }
-        body.dark .diff-box { background: #0b1120; border-color: #26334d; }
+        html[data-theme="dark"] .diff-box { background: #0b1120; border-color: #26334d; }
         .diff-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--secondary, #f1f5f9); border-bottom: 1px solid var(--border, #dbe3ee); font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--foreground, #1e293b); }
-        body.dark .diff-header { background: #131c31; border-bottom-color: #26334d; }
+        html[data-theme="dark"] .diff-header { background: #131c31; border-bottom-color: #26334d; }
         .diff-stats { display: inline-flex; gap: 6px; font-size: 11px; font-weight: 700; }
         .diff-stat-add { color: #16a34a; }
         .diff-stat-del { color: #dc2626; }
-        body.dark .diff-stat-add { color: #4ade80; }
-        body.dark .diff-stat-del { color: #f87171; }
+        html[data-theme="dark"] .diff-stat-add { color: #4ade80; }
+        html[data-theme="dark"] .diff-stat-del { color: #f87171; }
         .diff-body { max-height: 340px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.48; }
         .diff-line { padding: 1px 10px; white-space: pre-wrap; word-break: break-all; }
         .diff-line.add { background: rgba(22, 163, 74, 0.12); color: #14532d; border-left: 3px solid #22c55e; }
         .diff-line.del { background: rgba(220, 38, 38, 0.11); color: #7f1d1d; border-left: 3px solid #ef4444; }
         .diff-line.hunk { background: rgba(59, 130, 246, 0.09); color: #1d4ed8; font-weight: 700; padding-top: 3px; padding-bottom: 3px; }
         .diff-line.ctx { color: var(--muted-foreground, #475569); }
-        body.dark .diff-line.add { background: rgba(34, 197, 94, 0.15); color: #bbf7d0; border-left-color: #22c55e; }
-        body.dark .diff-line.del { background: rgba(239, 68, 68, 0.16); color: #fecaca; border-left-color: #ef4444; }
-        body.dark .diff-line.hunk { background: rgba(59, 130, 246, 0.16); color: #93c5fd; }
-        body.dark .diff-line.ctx { color: #94a3b8; }
+        html[data-theme="dark"] .diff-line.add { background: rgba(34, 197, 94, 0.15); color: #bbf7d0; border-left-color: #22c55e; }
+        html[data-theme="dark"] .diff-line.del { background: rgba(239, 68, 68, 0.16); color: #fecaca; border-left-color: #ef4444; }
+        html[data-theme="dark"] .diff-line.hunk { background: rgba(59, 130, 246, 0.16); color: #93c5fd; }
+        html[data-theme="dark"] .diff-line.ctx { color: #94a3b8; }
         /* Live subagent status pill */
         .sub-live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; font-family: ui-monospace, monospace; padding: 2px 7px; border-radius: 999px; margin-top: 4px; background: rgba(99,102,241,0.1); color: #4f46e5; border: 1px solid rgba(99,102,241,0.28); }
-        body.dark .sub-live-badge { background: rgba(99,102,241,0.18); color: #a5b4fc; border-color: rgba(129,140,248,0.35); }
+        html[data-theme="dark"] .sub-live-badge { background: rgba(99,102,241,0.18); color: #a5b4fc; border-color: rgba(129,140,248,0.35); }
         .sub-live-badge.running { background: rgba(245,158,11,0.14); color: #b45309; border-color: rgba(245,158,11,0.38); }
-        body.dark .sub-live-badge.running { background: rgba(245,158,11,0.2); color: #fcd34d; }
+        html[data-theme="dark"] .sub-live-badge.running { background: rgba(245,158,11,0.2); color: #fcd34d; }
         .sub-live-badge.error { background: rgba(239,68,68,0.14); color: #b91c1c; border-color: rgba(239,68,68,0.38); }
-        body.dark .sub-live-badge.error { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        html[data-theme="dark"] .sub-live-badge.error { background: rgba(239,68,68,0.2); color: #fca5a5; }
     </style>
     <!-- Bridge script to interact directly with Jetski runtime! -->
     <script src="/preload.js"></script>
@@ -931,6 +931,10 @@
         if (!tool) return [];
         const name = tool.name || '';
         if (name !== 'invoke_subagent' && name !== 'send_message') return [];
+        const cacheKey = (resultText ? resultText.length : 0) + ':' + (step ? step.step_index : 0);
+        if (tool._subCacheKey === cacheKey && Array.isArray(tool._subCached)) {
+            return tool._subCached;
+        }
         let targs = tool.arguments || tool.args || {};
         if (typeof targs === 'string') {
             try { targs = JSON.parse(targs); } catch (e) { targs = {}; }
@@ -958,6 +962,13 @@
             subSpecs = (name === 'invoke_subagent' && (targs.Role || targs.TypeName || targs.Prompt)) ? [targs] : [];
         }
         const count = Math.max(foundIds.length, subSpecs.length);
+        const roleTotalCounts = {};
+        for (let i = 0; i < subSpecs.length; i++) {
+            const sp = subSpecs[i];
+            if (!sp) continue;
+            const r = String(sp.Role || sp.TypeName || '').replace(/^"+|"+$/g, '').trim();
+            if (r) roleTotalCounts[r] = (roleTotalCounts[r] || 0) + 1;
+        }
         const usedRoleCounts = {};
         for (let i = 0; i < count; i++) {
             const spec = subSpecs[i] || {};
@@ -965,7 +976,7 @@
             let baseRole = String(spec.Role || spec.TypeName || (name === 'send_message' ? 'Subagent Peer' : ('Subagent ' + (i + 1)))).replace(/^"+|"+$/g, '').trim();
             if (!baseRole) baseRole = 'Subagent ' + (i + 1);
             usedRoleCounts[baseRole] = (usedRoleCounts[baseRole] || 0) + 1;
-            const roleDupCount = subSpecs.filter(s => s && String(s.Role || s.TypeName || '').replace(/^"+|"+$/g, '').trim() === baseRole).length;
+            const roleDupCount = roleTotalCounts[baseRole] || 0;
             const role = (count > 1 && roleDupCount > 1)
                 ? (baseRole + ' #' + usedRoleCounts[baseRole])
                 : baseRole;
@@ -981,6 +992,8 @@
                 stepIndex: step ? step.step_index : 0,
             });
         }
+        tool._subCacheKey = cacheKey;
+        tool._subCached = out;
         return out;
     }
 
@@ -1669,6 +1682,7 @@
     function applyTheme(dark, shouldRebuild) {
         isDarkMode = !!dark;
         document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+        if (document.body) document.body.classList.toggle('dark', isDarkMode);
         savePref('darkMode', isDarkMode);
         try { localStorage.setItem('tracer_theme', isDarkMode ? 'dark' : 'light'); } catch (e) {}
         if (btnTheme) {
@@ -2146,24 +2160,48 @@
         }
 
         try {
-            // Only ask for steps we don't have yet. We rewind to just before the
-            // earliest non-DONE step so in-flight steps get refreshed as they settle.
+            // Only ask for steps we don't have yet. Only rewind for genuinely in-flight
+            // steps near the tail of the transcript (not historical ERROR/CANCELED steps).
             let since = -1;
             if (transcriptStore.length) {
-                const pending = transcriptStore.find(s => s.status && s.status !== 'DONE');
-                since = pending ? pending.step_index - 1
-                                : transcriptStore[transcriptStore.length - 1].step_index;
+                const tailStart = Math.max(0, transcriptStore.length - 6);
+                let pending = null;
+                for (let i = tailStart; i < transcriptStore.length; i++) {
+                    const st = transcriptStore[i].status;
+                    if (st === 'RUNNING' || st === 'IN_PROGRESS' || st === 'PENDING') {
+                        pending = transcriptStore[i];
+                        break;
+                    }
+                }
+                since = pending
+                    ? pending.step_index - 1
+                    : transcriptStore[transcriptStore.length - 1].step_index;
             }
 
             const res = await fetch(apiUrl(`api/transcript?conversationId=${encodeURIComponent(activeConvId)}&since=${since}`));
             if (!res.ok) throw new Error(await res.text());
             const incoming = await res.json();
 
+            let hasDiff = false;
             if (incoming.length) {
-                // Merge by step_index so refreshed steps replace rather than duplicate.
+                // Merge by step_index and check whether any step is new or mutated.
                 const byIndex = new Map(transcriptStore.map(s => [s.step_index, s]));
-                incoming.forEach(s => byIndex.set(s.step_index, s));
-                transcriptStore = Array.from(byIndex.values()).sort((a, b) => a.step_index - b.step_index);
+                incoming.forEach(s => {
+                    const prev = byIndex.get(s.step_index);
+                    if (
+                        !prev ||
+                        prev.status !== s.status ||
+                        (prev.content || '').length !== (s.content || '').length ||
+                        (prev.thinking || '').length !== (s.thinking || '').length ||
+                        (prev.tool_calls ? prev.tool_calls.length : 0) !== (s.tool_calls ? s.tool_calls.length : 0)
+                    ) {
+                        hasDiff = true;
+                    }
+                    byIndex.set(s.step_index, s);
+                });
+                if (hasDiff) {
+                    transcriptStore = Array.from(byIndex.values()).sort((a, b) => a.step_index - b.step_index);
+                }
             }
             const data = transcriptStore;
 
@@ -2178,8 +2216,8 @@
                 }
                 // Cached so view-mode toggles can rebuild instantly without re-fetching.
                 window.lastTranscript = data;
-                // Only re-render when something actually arrived.
-                if (incoming.length) {
+                // Only re-render when new or mutated steps actually arrived.
+                if (hasDiff) {
                     updateGraph(data);
                     fetchSubagentsLiveStatus();
                     fetchSessionTelemetry(false);
@@ -3119,6 +3157,10 @@
     // actually took than diffing the surrounding step timestamps, so prefer it
     // and only fall back to step metadata when the preamble is absent.
     function parseTiming(rawText, step, resultStep) {
+        const cacheKey = (rawText ? rawText.length : 0) + ':' + (step ? step.created_at : '') + ':' + (resultStep ? resultStep.created_at : '');
+        if (resultStep && resultStep._timingCacheKey === cacheKey) {
+            return resultStep._timingCached;
+        }
         let start = null, end = null;
         if (rawText) {
             const c = rawText.match(/^\s*Created At:\s*(\S+)/m);
@@ -3130,8 +3172,14 @@
             start = Date.parse(step.created_at);
             end = Date.parse(resultStep.created_at);
         }
-        if (!start || !end || isNaN(start) || isNaN(end) || end < start) return null;
-        return { start: start, end: end, ms: end - start };
+        const out = (!start || !end || isNaN(start) || isNaN(end) || end < start)
+            ? null
+            : { start: start, end: end, ms: end - start };
+        if (resultStep) {
+            resultStep._timingCacheKey = cacheKey;
+            resultStep._timingCached = out;
+        }
+        return out;
     }
 
     function formatDuration(ms) {
@@ -3655,10 +3703,10 @@
     }
     window.showShortcuts = renderShortcuts;
 
-    // Shared with the overview; renderInspector defines its own local copy.
+    // Shared HTML escaper (including single quotes for inline attribute safety).
     function escapeHtml(unsafe) {
         return unsafe ? unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;")
-                              .replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '';
+                              .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;") : '';
     }
 
     // --- Export ------------------------------------------------------------
@@ -4778,58 +4826,52 @@
         return out;
     }
 
-    function spawnTopoParticle(edgeKey, direction, color, durationMs) {
+    function spawnSvgParticle(layerId, pathPrefix, edgeKey, direction, color, durationMs, opts) {
         if (!edgeKey) return;
-        const layer = document.getElementById('topo-particles-layer');
+        const layer = document.getElementById(layerId);
         if (!layer) return;
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const pathId = '#topo-path-' + edgeKey + '-' + direction;
+        const pathId = '#' + pathPrefix + edgeKey + '-' + direction;
         const kp = direction === 'reverse' ? '1;0' : '0;1';
-        const dur = (durationMs || 680) + 'ms';
+        const durMs = durationMs || (opts && opts.defaultDur) || 680;
+        const dur = durMs + 'ms';
+        const rOuter = (opts && opts.rOuter) || 8;
+        const rInner = (opts && opts.rInner) || 4;
+        const opOuter = (opts && opts.opOuter) || '0.28';
+        const motionAttrs = (opts && opts.spline)
+            ? 'calcMode="spline" keySplines="0.25 0.1 0.25 1"'
+            : 'calcMode="linear"';
 
         g.innerHTML =
-            '<circle r="8" fill="' + color + '" opacity="0.28">' +
-                '<animateMotion dur="' + dur + '" fill="freeze" keyPoints="' + kp + '" keyTimes="0;1" calcMode="spline" keySplines="0.25 0.1 0.25 1">' +
+            '<circle r="' + rOuter + '" fill="' + color + '" opacity="' + opOuter + '">' +
+                '<animateMotion dur="' + dur + '" fill="freeze" keyPoints="' + kp + '" keyTimes="0;1" ' + motionAttrs + '>' +
                     '<mpath href="' + pathId + '" />' +
                 '</animateMotion>' +
             '</circle>' +
-            '<circle r="4" fill="#FFFFFF" stroke="' + color + '" stroke-width="2.5">' +
-                '<animateMotion dur="' + dur + '" fill="freeze" keyPoints="' + kp + '" keyTimes="0;1" calcMode="spline" keySplines="0.25 0.1 0.25 1">' +
+            '<circle r="' + rInner + '" fill="#FFFFFF" stroke="' + color + '" stroke-width="2.5">' +
+                '<animateMotion dur="' + dur + '" fill="freeze" keyPoints="' + kp + '" keyTimes="0;1" ' + motionAttrs + '>' +
                     '<mpath href="' + pathId + '" />' +
                 '</animateMotion>' +
             '</circle>';
         layer.appendChild(g);
         setTimeout(() => {
             if (g.parentNode) g.parentNode.removeChild(g);
-        }, (durationMs || 680) + 60);
+        }, durMs + 60);
+    }
+
+    function spawnTopoParticle(edgeKey, direction, color, durationMs) {
+        if (viewMode !== 'topology') return;
+        spawnSvgParticle('topo-particles-layer', 'topo-path-', edgeKey, direction, color, durationMs, {
+            rOuter: 8, rInner: 4, opOuter: '0.28', spline: true, defaultDur: 680
+        });
     }
 
     function spawnSimpleTopoParticle(simpleEdge, direction, color, durationMs) {
-        if (!simpleEdge) return;
-        const layer = document.getElementById('topo-simple-particles-layer');
-        if (!layer) return;
-
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const pathId = '#topo-simple-path-' + simpleEdge + '-' + direction;
-        const kp = direction === 'reverse' ? '1;0' : '0;1';
-        const dur = (durationMs || 720) + 'ms';
-
-        g.innerHTML =
-            '<circle r="7" fill="' + color + '" opacity="0.35">' +
-                '<animateMotion dur="' + dur + '" fill="freeze" keyPoints="' + kp + '" keyTimes="0;1" calcMode="linear">' +
-                    '<mpath href="' + pathId + '" />' +
-                '</animateMotion>' +
-            '</circle>' +
-            '<circle r="3.5" fill="#FFFFFF" stroke="' + color + '" stroke-width="2.5">' +
-                '<animateMotion dur="' + dur + '" fill="freeze" keyPoints="' + kp + '" keyTimes="0;1" calcMode="linear">' +
-                    '<mpath href="' + pathId + '" />' +
-                '</animateMotion>' +
-            '</circle>';
-        layer.appendChild(g);
-        setTimeout(() => {
-            if (g.parentNode) g.parentNode.removeChild(g);
-        }, (durationMs || 720) + 60);
+        if (viewMode !== 'simple_topo') return;
+        spawnSvgParticle('topo-simple-particles-layer', 'topo-simple-path-', simpleEdge, direction, color, durationMs, {
+            rOuter: 7, rInner: 3.5, opOuter: '0.35', spline: false, defaultDur: 720
+        });
     }
 
     function triggerTopoEventAnimation(ev, quietParticles) {
@@ -4922,8 +4964,9 @@
         renderTopoWaterfall();
     }
 
+    let topoLastTickAt = 0;
     function ensureTopoTicker() {
-        if (topoRafId) return;
+        if (topoRafId || viewMode === 'timeline') return;
         const tick = () => {
             const now = Date.now();
             const active =
@@ -4937,8 +4980,12 @@
                 Object.values(topoSimpleFlows).some(f => f && f.until > now) ||
                 Object.values(topoPulses).some(t => t && now - t < TOPO_PULSE_MS);
 
-            renderTopologySVG();
-            if (active) {
+            // Throttle SVG DOM repaints to ~25 FPS (40ms) during active animations so clicks on pills are never dropped
+            if (!active || (now - topoLastTickAt) >= 40) {
+                topoLastTickAt = now;
+                renderTopologySVG();
+            }
+            if (active && viewMode !== 'timeline') {
                 topoRafId = requestAnimationFrame(tick);
             } else {
                 topoRafId = 0;
@@ -4980,11 +5027,14 @@
         let inFlight = false;
         let prevTimestamp = null;
 
+        const IN_FLIGHT_STATUSES = new Set(['RUNNING', 'IN_PROGRESS', 'PENDING']);
+        const tailStartIdx = Math.max(0, data.length - 6);
+
         data.forEach((step, index) => {
             const ts = step.created_at ? Date.parse(step.created_at) : Date.now();
             const stepDeltaMs = (prevTimestamp && ts >= prevTimestamp) ? (ts - prevTimestamp) : 0;
             prevTimestamp = ts;
-            if (step.status && step.status !== 'DONE') inFlight = true;
+            if (index >= tailStartIdx && step.status && IN_FLIGHT_STATUSES.has(step.status)) inFlight = true;
 
             if (step.type === 'USER_INPUT') {
                 reqNum++;
@@ -5538,6 +5588,11 @@
     }
 
     function renderTopologySVG() {
+        if (viewMode === 'timeline') return;
+        if (viewMode === 'simple_topo') {
+            renderSimpleTopologySVG();
+            return;
+        }
         const edgesLayer = document.getElementById('topo-edges-layer');
         const headersLayer = document.getElementById('topo-headers-layer');
         const ioLayer = document.getElementById('topo-io-layer');
@@ -5911,8 +5966,11 @@
         });
         clustersLayer.innerHTML = clustersSvg;
 
-        clustersLayer.querySelectorAll('.topo-pill-node').forEach(el => {
-            el.addEventListener('click', (e) => {
+        if (!clustersLayer._delegated) {
+            clustersLayer._delegated = true;
+            clustersLayer.addEventListener('click', (e) => {
+                const el = e.target.closest('.topo-pill-node');
+                if (!el) return;
                 e.stopPropagation();
                 const tKey = el.dataset.toolKey;
                 if (!tKey) return;
@@ -5932,7 +5990,9 @@
                 const nodeId = topoLastNodeForTool[tKey];
                 if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId);
             });
-            el.addEventListener('dblclick', (e) => {
+            clustersLayer.addEventListener('dblclick', (e) => {
+                const el = e.target.closest('.topo-pill-node');
+                if (!el) return;
                 e.stopPropagation();
                 const tKey = el.dataset.toolKey;
                 if (tKey && topoSubagentByRole[tKey]) {
@@ -5943,9 +6003,7 @@
                     }
                 }
             });
-        });
-
-        renderSimpleTopologySVG();
+        }
     }
 
     function buildSimpleToolArgsPanelSVG(focused, cx, y, maxWidth, stroke, titleFill, rowFill) {
@@ -6660,7 +6718,7 @@
 
         openInspectorDrawer('Step Inspector', true);
         let text = '';
-        const escapeHtmlRaw = (unsafe) => unsafe ? unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '';
+        const escapeHtmlRaw = escapeHtml;
         
         const renderMarkdown = (mdStr) => {
             if (!mdStr) return '';
