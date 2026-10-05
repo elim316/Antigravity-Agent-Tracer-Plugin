@@ -112,10 +112,174 @@ def _background_maintenance_loop():
         time.sleep(5)
 
 
+import re
+from datetime import datetime, timezone
+
+_CONV_META_CACHE = {}
+_UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+_SUB_CONV_RE = re.compile(
+    r'(?:conversation[\s_]*id"?\s*[:=]\s*"?|conversation://|brain/)([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
+    re.IGNORECASE,
+)
+
+
+def _clean_prompt_title(raw):
+    if not raw:
+        return ""
+    s = re.sub(r"<ADDITIONAL_METADATA>[\s\S]*?</ADDITIONAL_METADATA>", "", raw)
+    s = re.sub(r"<SYSTEM_MESSAGE>[\s\S]*?</SYSTEM_MESSAGE>", "", s)
+    s = re.sub(r"<CONTEXT_SUMMARY>[\s\S]*?</CONTEXT_SUMMARY>", "", s)
+    s = re.sub(r"</?[A-Z_]+>", "", s)
+    for line in s.splitlines():
+        clean = line.strip().lstrip("#*-•> ").strip()
+        if clean:
+            return clean[:96]
+    return ""
+
+
+def _summarize_conversation(conv_id, tpath):
+    try:
+        mtime = os.path.getmtime(tpath)
+    except OSError:
+        return None
+
+    cached = _CONV_META_CACHE.get(conv_id)
+    if cached and cached[0] == mtime:
+        return dict(cached[1])
+
+    turns = 0
+    steps = 0
+    tools = 0
+    errors = 0
+    title = ""
+    is_automation = False
+    updated_at = ""
+    last_status = "DONE"
+    last_type = ""
+    subagents = []
+    seen_subs = set()
+    pending_sub_specs = []
+
+    try:
+        with open(tpath, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    step = json.loads(line)
+                except Exception:
+                    continue
+                steps += 1
+                stype = step.get("type") or ""
+                sstatus = step.get("status") or "DONE"
+                screated = step.get("created_at") or ""
+                if screated:
+                    updated_at = screated
+                last_status = sstatus
+                last_type = stype
+
+                if stype == "USER_INPUT":
+                    turns += 1
+                    if not title:
+                        content = step.get("content") or ""
+                        title = _clean_prompt_title(content)
+                        low = content.lower()
+                        if (
+                            "step 0 - window" in low
+                            or "daily communications summary" in low
+                            or "daily digest" in low
+                            or "meeting prep" in low
+                            or "dreaming" in low
+                            or "automated trigger" in low
+                        ):
+                            is_automation = True
+                elif stype == "ERROR_MESSAGE":
+                    errors += 1
+                elif stype == "PLANNER_RESPONSE":
+                    tcalls = step.get("tool_calls") or []
+                    if isinstance(tcalls, list):
+                        tools += len(tcalls)
+                        for tc in tcalls:
+                            if not isinstance(tc, dict):
+                                continue
+                            tname = tc.get("name") or ""
+                            targs = tc.get("arguments") or tc.get("args") or {}
+                            if isinstance(targs, str):
+                                try:
+                                    targs = json.loads(targs)
+                                except Exception:
+                                    targs = {}
+                            if tname == "invoke_subagent" and isinstance(targs, dict):
+                                specs = targs.get("Subagents")
+                                if isinstance(specs, str):
+                                    try:
+                                        specs = json.loads(specs)
+                                    except Exception:
+                                        specs = []
+                                if isinstance(specs, list) and specs:
+                                    for sp in specs:
+                                        if isinstance(sp, dict):
+                                            role = str(sp.get("Role") or sp.get("TypeName") or "Subagent").strip('" ')
+                                            pending_sub_specs.append(role)
+                                else:
+                                    role = str(targs.get("Role") or targs.get("TypeName") or "Subagent").strip('" ')
+                                    pending_sub_specs.append(role)
+                elif stype == "GENERIC":
+                    content = step.get("content") or ""
+                    low_c = content.lower()
+                    if "conversation" in low_c or "brain/" in low_c:
+                        for m in _SUB_CONV_RE.finditer(content):
+                            sub_id = m.group(1)
+                            if sub_id != conv_id and sub_id not in seen_subs:
+                                seen_subs.add(sub_id)
+                                role = pending_sub_specs.pop(0) if pending_sub_specs else "Subagent"
+                                subagents.append({"id": sub_id, "role": role})
+    except OSError:
+        return None
+
+    if not updated_at and mtime:
+        updated_at = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+
+    age_s = time.time() - mtime
+    if last_status in ("RUNNING", "IN_PROGRESS", "PENDING") or (age_s < 18 and last_type in ("USER_INPUT", "PLANNER_RESPONSE")):
+        status = "RUNNING"
+    elif last_status == "ERROR" or last_type == "ERROR_MESSAGE":
+        status = "ERROR"
+    else:
+        status = "IDLE"
+
+    info = {
+        "id": conv_id,
+        "title": title or ("Session " + conv_id[:8]),
+        "turns": turns,
+        "steps": steps,
+        "tools": tools,
+        "errors": errors,
+        "status": status,
+        "isAutomation": is_automation,
+        "isSubagent": False,
+        "parentId": None,
+        "subagents": subagents,
+        "updatedAt": updated_at,
+        "mtime": mtime,
+    }
+    _CONV_META_CACHE[conv_id] = (mtime, info)
+    return dict(info)
+
+
 class AgentTracerHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Suppress noisy logging
         pass
+
+    def _brain_roots(self):
+        env_dir = os.environ.get("AGENT_TRACER_BRAIN_DIR")
+        return [
+            *( [os.path.expanduser(env_dir)] if env_dir else [] ),
+            os.path.expanduser("~/.gemini/jetski/brain"),
+            os.path.expanduser("~/.gemini/antigravity/brain"),
+        ]
 
     def _transcript_path(self, conv_id, full=False):
         """Resolve a conversation's transcript file across Jetski and Antigravity.
@@ -124,17 +288,60 @@ class AgentTracerHandler(BaseHTTPRequestHandler):
         `transcript_full.jsonl` carries the untruncated content.
         """
         name = "transcript_full.jsonl" if full else "transcript.jsonl"
-        env_dir = os.environ.get("AGENT_TRACER_BRAIN_DIR")
-        candidates = [
-            *( [os.path.expanduser(env_dir)] if env_dir else [] ),
-            os.path.expanduser("~/.gemini/jetski/brain"),
-            os.path.expanduser("~/.gemini/antigravity/brain"),
-        ]
+        candidates = self._brain_roots()
         for brain_dir in candidates:
             candidate = os.path.join(brain_dir, conv_id, ".system_generated/logs", name)
             if os.path.exists(candidate):
                 return candidate
         return os.path.join(candidates[0], conv_id, ".system_generated/logs", name)
+
+    def _list_conversations(self, include_id=""):
+        seen = {}
+        for root in self._brain_roots():
+            if not os.path.isdir(root):
+                continue
+            try:
+                entries = os.listdir(root)
+            except OSError:
+                continue
+            for name in entries:
+                if name in seen or not _UUID_RE.match(name):
+                    continue
+                tpath = os.path.join(root, name, ".system_generated/logs/transcript.jsonl")
+                if not os.path.isfile(tpath):
+                    continue
+                try:
+                    mtime = os.path.getmtime(tpath)
+                except OSError:
+                    continue
+                seen[name] = (mtime, tpath)
+
+        # Sort by mtime desc and inspect top 65 (plus include_id if requested)
+        ordered = sorted(seen.items(), key=lambda kv: kv[1][0], reverse=True)
+        selected = ordered[:65]
+        if include_id and include_id in seen and not any(k == include_id for k, _ in selected):
+            selected.append((include_id, seen[include_id]))
+
+        items = []
+        by_id = {}
+        for cid, (_, tpath) in selected:
+            meta = _summarize_conversation(cid, tpath)
+            if meta and meta.get("steps", 0) > 0:
+                items.append(meta)
+                by_id[cid] = meta
+
+        # Link parent -> subagent relationships discovered across transcripts
+        for item in items:
+            for sub in item.get("subagents") or []:
+                sid = sub.get("id")
+                if sid and sid in by_id:
+                    by_id[sid]["isSubagent"] = True
+                    by_id[sid]["parentId"] = item["id"]
+                    if sub.get("role") and by_id[sid]["title"].startswith("Session "):
+                        by_id[sid]["title"] = sub["role"]
+
+        items.sort(key=lambda x: x.get("mtime", 0.0), reverse=True)
+        return items[:55]
 
     def _send_json(self, payload, status=200):
         body = json.dumps(payload).encode("utf-8")
@@ -169,6 +376,12 @@ class AgentTracerHandler(BaseHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed_url.query)
             force = qs.get("force", ["0"])[0] == "1"
             self._send_json(_check_update_status(force_fetch=force))
+            return
+
+        elif path == "/api/conversations":
+            qs = urllib.parse.parse_qs(parsed_url.query)
+            active_id = qs.get("activeId", [""])[0]
+            self._send_json({"conversations": self._list_conversations(include_id=active_id)})
             return
             
         elif path == "/api/transcript":
