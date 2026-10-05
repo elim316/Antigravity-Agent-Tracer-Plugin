@@ -361,7 +361,7 @@ def _get_token_telemetry(conv_id):
 
     now = time.time()
     cached = _TELEMETRY_CACHE.get(conv_id)
-    if cached and (now - cached[0]) < 4.0:
+    if cached and (now - cached[0]) < 15.0:
         return cached[1]
 
     addr, csrf = _discover_language_server()
@@ -443,6 +443,9 @@ def _get_token_telemetry(conv_id):
     return res
 
 
+_CONV_LIST_CACHE = {"ts": 0.0, "include_id": "", "items": []}
+
+
 class AgentTracerHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Suppress noisy logging
@@ -471,6 +474,14 @@ class AgentTracerHandler(BaseHTTPRequestHandler):
         return os.path.join(candidates[0], conv_id, ".system_generated/logs", name)
 
     def _list_conversations(self, include_id=""):
+        now = time.time()
+        if (
+            _CONV_LIST_CACHE["items"]
+            and _CONV_LIST_CACHE["include_id"] == include_id
+            and (now - _CONV_LIST_CACHE["ts"]) < 10.0
+        ):
+            return _CONV_LIST_CACHE["items"]
+
         seen = {}
         for root in self._brain_roots():
             if not os.path.isdir(root):
@@ -516,7 +527,9 @@ class AgentTracerHandler(BaseHTTPRequestHandler):
                         by_id[sid]["title"] = sub["role"]
 
         items.sort(key=lambda x: x.get("mtime", 0.0), reverse=True)
-        return items[:55]
+        res_items = items[:55]
+        _CONV_LIST_CACHE.update({"ts": now, "include_id": include_id, "items": res_items})
+        return res_items
 
     def _send_json(self, payload, status=200):
         body = json.dumps(payload).encode("utf-8")
