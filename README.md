@@ -220,3 +220,10 @@ agent-tracer/
         ├── server.py           # Zero-dependency HTTP server (/api/transcript, /api/conversations, /api/step_full)
         └── index.html          # Single-file Timeline (Vis.js), Architecture & Simplified SVG UI + Inspector
 ```
+
+---
+
+## Acknowledgements
+
+The orbital layout in the Simplified view was inspired by the architecture visualiser in [isurusu/live-api-ecommerce](https://github.com/isurusu/live-api-ecommerce) by [@isurusu](https://github.com/isurusu).
+
