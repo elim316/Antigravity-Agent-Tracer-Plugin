@@ -1,6 +1,6 @@
 {
-  "name": "agent-tracer-plugin",
-  "displayName": "Agent Tracer",
+  "name": "Agent-Tracer",
+  "displayName": "Agent-Tracer",
   "description": "Live trajectory timeline, architectural blueprint, and orbital topology visualiser for Jetski agent thoughts, tools, and parallel subagents.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
