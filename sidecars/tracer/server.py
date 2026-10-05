@@ -153,9 +153,11 @@ def _summarize_conversation(conv_id, tpath):
     errors = 0
     title = ""
     is_automation = False
+    first_at = ""
     updated_at = ""
     last_status = "DONE"
     last_type = ""
+    last_tool = ""
     subagents = []
     seen_subs = set()
     pending_sub_specs = []
@@ -175,6 +177,8 @@ def _summarize_conversation(conv_id, tpath):
                 sstatus = step.get("status") or "DONE"
                 screated = step.get("created_at") or ""
                 if screated:
+                    if not first_at:
+                        first_at = screated
                     updated_at = screated
                 last_status = sstatus
                 last_type = stype
@@ -204,6 +208,8 @@ def _summarize_conversation(conv_id, tpath):
                             if not isinstance(tc, dict):
                                 continue
                             tname = tc.get("name") or ""
+                            if tname:
+                                last_tool = tname
                             targs = tc.get("arguments") or tc.get("args") or {}
                             if isinstance(targs, str):
                                 try:
@@ -241,6 +247,15 @@ def _summarize_conversation(conv_id, tpath):
     if not updated_at and mtime:
         updated_at = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
 
+    duration_ms = 0
+    if first_at and updated_at:
+        try:
+            t0 = datetime.fromisoformat(first_at.replace("Z", "+00:00"))
+            t1 = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+            duration_ms = max(0, int((t1 - t0).total_seconds() * 1000))
+        except Exception:
+            duration_ms = 0
+
     age_s = time.time() - mtime
     if last_status in ("RUNNING", "IN_PROGRESS", "PENDING") or (age_s < 18 and last_type in ("USER_INPUT", "PLANNER_RESPONSE")):
         status = "RUNNING"
@@ -257,6 +272,8 @@ def _summarize_conversation(conv_id, tpath):
         "tools": tools,
         "errors": errors,
         "status": status,
+        "lastTool": last_tool,
+        "durationMs": duration_ms,
         "isAutomation": is_automation,
         "isSubagent": False,
         "parentId": None,
@@ -266,6 +283,164 @@ def _summarize_conversation(conv_id, tpath):
     }
     _CONV_META_CACHE[conv_id] = (mtime, info)
     return dict(info)
+
+
+import urllib.request
+
+_LS_CONN_CACHE = {"ts": 0.0, "addr": None, "csrf": None}
+_TELEMETRY_CACHE = {}
+
+_MODEL_LABELS = {
+    "MODEL_PLACEHOLDER_M37": "Claude Sonnet 4.6",
+    "MODEL_PLACEHOLDER_M35": "Claude Sonnet 4.5",
+    "MODEL_PLACEHOLDER_M26": "Claude Opus 4.6",
+    "MODEL_PLACEHOLDER_M47": "Gemini 3 Flash",
+    "MODEL_PLACEHOLDER_M36": "Gemini 3.1 Pro",
+    "MODEL_PLACEHOLDER_M38": "Gemini 2.5 Pro",
+    "MODEL_PLACEHOLDER_M18": "Gemini 2.5 Flash",
+}
+
+_MODEL_PRICING = {
+    "MODEL_PLACEHOLDER_M26": (5.0, 0.50, 25.0),
+    "MODEL_PLACEHOLDER_M37": (3.0, 0.30, 15.0),
+    "MODEL_PLACEHOLDER_M35": (3.0, 0.30, 15.0),
+    "MODEL_PLACEHOLDER_M36": (1.25, 0.31, 10.0),
+    "MODEL_PLACEHOLDER_M47": (0.15, 0.04, 0.60),
+}
+
+
+def _discover_language_server():
+    """Discover the local Jetski LanguageServer HTTP address and CSRF token."""
+    now = time.time()
+    if _LS_CONN_CACHE["addr"] and _LS_CONN_CACHE["csrf"] and (now - _LS_CONN_CACHE["ts"]) < 30:
+        return _LS_CONN_CACHE["addr"], _LS_CONN_CACHE["csrf"]
+
+    env_addr = os.environ.get("ANTIGRAVITY_LS_ADDRESS")
+    env_csrf = os.environ.get("ANTIGRAVITY_CSRF_TOKEN")
+    if env_addr and env_csrf:
+        _LS_CONN_CACHE.update({"ts": now, "addr": env_addr, "csrf": env_csrf})
+        return env_addr, env_csrf
+
+    try:
+        ps_out = subprocess.check_output(["ps", "-eo", "pid,args"], text=True, timeout=3)
+        candidates = []
+        for line in ps_out.splitlines():
+            if "language_server" in line and "--csrf_token" in line:
+                parts = line.strip().split(None, 1)
+                if len(parts) < 2:
+                    continue
+                pid, args = parts[0], parts[1]
+                m = re.search(r"--csrf_token[=\s]+([0-9a-fA-F-]+)", args)
+                if m:
+                    candidates.append((int(pid), m.group(1)))
+        if not candidates:
+            return None, None
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        ss_out = subprocess.check_output(["ss", "-tlpn"], text=True, timeout=3)
+        for pid, csrf in candidates:
+            ports = []
+            for sline in ss_out.splitlines():
+                if f"pid={pid}," in sline:
+                    pm = re.search(r"127\.0\.0\.1:(\d+)", sline)
+                    if pm:
+                        ports.append(int(pm.group(1)))
+            if ports:
+                ports.sort()
+                addr = f"http://127.0.0.1:{ports[0]}"
+                _LS_CONN_CACHE.update({"ts": now, "addr": addr, "csrf": csrf})
+                return addr, csrf
+    except Exception:
+        pass
+    return None, None
+
+
+def _get_token_telemetry(conv_id):
+    """Query LanguageServer GetCascadeTrajectory for token & cache telemetry."""
+    if not conv_id or not _UUID_RE.match(conv_id):
+        return {"available": False}
+
+    now = time.time()
+    cached = _TELEMETRY_CACHE.get(conv_id)
+    if cached and (now - cached[0]) < 4.0:
+        return cached[1]
+
+    addr, csrf = _discover_language_server()
+    if not addr or not csrf:
+        return {"available": False}
+
+    url = f"{addr}/exa.language_server_pb.LanguageServerService/GetCascadeTrajectory"
+    try:
+        body = json.dumps({"cascade_id": conv_id}).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Connect-Protocol-Version": "1",
+                "x-codeium-csrf-token": csrf,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=3.5) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        _LS_CONN_CACHE["ts"] = 0.0
+        return {"available": False}
+
+    traj = (payload or {}).get("trajectory") or {}
+    gen_meta = traj.get("generatorMetadata") or []
+    if not gen_meta:
+        res = {"available": False}
+        _TELEMETRY_CACHE[conv_id] = (now, res)
+        return res
+
+    uncached_in = 0
+    cache_read = 0
+    out_tok = 0
+    think_tok = 0
+    last_model_raw = ""
+    est_cost = 0.0
+    generations = 0
+
+    for gm in gen_meta:
+        cm = (gm or {}).get("chatModel") or {}
+        u = cm.get("usage") or {}
+        if not u:
+            continue
+        generations += 1
+        m_raw = u.get("model") or cm.get("model") or ""
+        if m_raw:
+            last_model_raw = m_raw
+        inp = int(u.get("inputTokens") or 0)
+        cr = int(u.get("cacheReadTokens") or 0)
+        ot = int(u.get("outputTokens") or 0)
+        tt = int(u.get("thinkingOutputTokens") or 0)
+        uncached_in += inp
+        cache_read += cr
+        out_tok += ot
+        think_tok += tt
+        in_rate, cache_rate, out_rate = _MODEL_PRICING.get(m_raw, (3.0, 0.30, 15.0))
+        est_cost += (inp / 1e6) * in_rate + (cr / 1e6) * cache_rate + ((ot + tt) / 1e6) * out_rate
+
+    prompt_tok = uncached_in + cache_read
+    cache_hit_pct = round((cache_read / prompt_tok) * 100.0, 1) if prompt_tok > 0 else 0.0
+    model_label = _MODEL_LABELS.get(last_model_raw, last_model_raw or "Default Model")
+
+    res = {
+        "available": True,
+        "model": model_label,
+        "modelRaw": last_model_raw,
+        "generations": generations,
+        "promptTokens": prompt_tok,
+        "uncachedInputTokens": uncached_in,
+        "cacheReadTokens": cache_read,
+        "outputTokens": out_tok,
+        "thinkingTokens": think_tok,
+        "cacheHitPct": cache_hit_pct,
+        "estimatedCostUsd": round(est_cost, 4),
+    }
+    _TELEMETRY_CACHE[conv_id] = (now, res)
+    return res
 
 
 class AgentTracerHandler(BaseHTTPRequestHandler):
@@ -382,6 +557,34 @@ class AgentTracerHandler(BaseHTTPRequestHandler):
             qs = urllib.parse.parse_qs(parsed_url.query)
             active_id = qs.get("activeId", [""])[0]
             self._send_json({"conversations": self._list_conversations(include_id=active_id)})
+            return
+
+        elif path == "/api/subagents_status":
+            qs = urllib.parse.parse_qs(parsed_url.query)
+            raw_ids = qs.get("ids", [""])[0]
+            ids = [x.strip() for x in raw_ids.split(",") if _UUID_RE.match(x.strip())][:30]
+            result = {}
+            for cid in ids:
+                tpath = self._transcript_path(cid, full=False)
+                if os.path.isfile(tpath):
+                    meta = _summarize_conversation(cid, tpath)
+                    if meta:
+                        result[cid] = {
+                            "id": cid,
+                            "status": meta.get("status", "IDLE"),
+                            "steps": meta.get("steps", 0),
+                            "tools": meta.get("tools", 0),
+                            "errors": meta.get("errors", 0),
+                            "lastTool": meta.get("lastTool", ""),
+                            "durationMs": meta.get("durationMs", 0),
+                        }
+            self._send_json({"subagents": result})
+            return
+
+        elif path == "/api/telemetry":
+            qs = urllib.parse.parse_qs(parsed_url.query)
+            conv_id = qs.get("conversationId", [""])[0]
+            self._send_json(_get_token_telemetry(conv_id))
             return
             
         elif path == "/api/transcript":

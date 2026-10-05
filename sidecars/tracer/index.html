@@ -343,6 +343,42 @@
         .key-row .what { font-size: 12px; color: var(--foreground, #202124); line-height: 1.45; }
         kbd { display: inline-block; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1; padding: 4px 6px; min-width: 9px; text-align: center; color: var(--foreground, #202124); background: var(--secondary, #f1f3f4); border: 1px solid var(--border, #dadce0); border-bottom-width: 2px; border-radius: 4px; }
         .key-row .sep { font-size: 11px; color: var(--muted-foreground, #9aa0a6); align-self: center; }
+        /* Export dropdown popover */
+        .export-wrap { position: relative; display: inline-flex; align-items: center; }
+        .export-popover { position: absolute; top: calc(100% + 6px); right: 0; width: 255px; background: var(--card, #ffffff); border: 1px solid var(--border, #cbd5e1); border-radius: 9px; box-shadow: 0 12px 30px rgba(0,0,0,0.22); z-index: 95; padding: 5px; display: flex; flex-direction: column; gap: 2px; }
+        body.dark .export-popover { background: #0f172a; border-color: #334155; box-shadow: 0 14px 36px rgba(0,0,0,0.65); }
+        .export-popover.hidden { display: none !important; }
+        .export-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 7px 10px; border: none; border-radius: 6px; background: transparent; color: var(--foreground, #1e293b); cursor: pointer; font-family: inherit; transition: background 0.12s; }
+        .export-item:hover { background: rgba(59,130,246,0.1); }
+        .export-item-title { font-size: 12px; font-weight: 700; color: var(--foreground, #1e293b); }
+        .export-item-sub { font-size: 10.5px; color: var(--muted-foreground, #64748b); }
+        /* Colour-coded unified diff view in Inspector */
+        .diff-box { border: 1px solid var(--border, #dbe3ee); border-radius: 7px; overflow: hidden; background: var(--card, #ffffff); margin-top: 6px; }
+        body.dark .diff-box { background: #0b1120; border-color: #26334d; }
+        .diff-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--secondary, #f1f5f9); border-bottom: 1px solid var(--border, #dbe3ee); font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--foreground, #1e293b); }
+        body.dark .diff-header { background: #131c31; border-bottom-color: #26334d; }
+        .diff-stats { display: inline-flex; gap: 6px; font-size: 11px; font-weight: 700; }
+        .diff-stat-add { color: #16a34a; }
+        .diff-stat-del { color: #dc2626; }
+        body.dark .diff-stat-add { color: #4ade80; }
+        body.dark .diff-stat-del { color: #f87171; }
+        .diff-body { max-height: 340px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.48; }
+        .diff-line { padding: 1px 10px; white-space: pre-wrap; word-break: break-all; }
+        .diff-line.add { background: rgba(22, 163, 74, 0.12); color: #14532d; border-left: 3px solid #22c55e; }
+        .diff-line.del { background: rgba(220, 38, 38, 0.11); color: #7f1d1d; border-left: 3px solid #ef4444; }
+        .diff-line.hunk { background: rgba(59, 130, 246, 0.09); color: #1d4ed8; font-weight: 700; padding-top: 3px; padding-bottom: 3px; }
+        .diff-line.ctx { color: var(--muted-foreground, #475569); }
+        body.dark .diff-line.add { background: rgba(34, 197, 94, 0.15); color: #bbf7d0; border-left-color: #22c55e; }
+        body.dark .diff-line.del { background: rgba(239, 68, 68, 0.16); color: #fecaca; border-left-color: #ef4444; }
+        body.dark .diff-line.hunk { background: rgba(59, 130, 246, 0.16); color: #93c5fd; }
+        body.dark .diff-line.ctx { color: #94a3b8; }
+        /* Live subagent status pill */
+        .sub-live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; font-family: ui-monospace, monospace; padding: 2px 7px; border-radius: 999px; margin-top: 4px; background: rgba(99,102,241,0.1); color: #4f46e5; border: 1px solid rgba(99,102,241,0.28); }
+        body.dark .sub-live-badge { background: rgba(99,102,241,0.18); color: #a5b4fc; border-color: rgba(129,140,248,0.35); }
+        .sub-live-badge.running { background: rgba(245,158,11,0.14); color: #b45309; border-color: rgba(245,158,11,0.38); }
+        body.dark .sub-live-badge.running { background: rgba(245,158,11,0.2); color: #fcd34d; }
+        .sub-live-badge.error { background: rgba(239,68,68,0.14); color: #b91c1c; border-color: rgba(239,68,68,0.38); }
+        body.dark .sub-live-badge.error { background: rgba(239,68,68,0.2); color: #fca5a5; }
     </style>
     <!-- Bridge script to interact directly with Jetski runtime! -->
     <script src="/preload.js"></script>
@@ -383,7 +419,7 @@
                     </div>
                 </div>
             </div>
-            <div class="tb-group">
+            <div class="tb-group" id="timelineTogglesGroup">
                 <input type="checkbox" id="toggleSummaries" checked>
                 <label for="toggleSummaries" title="Show a one-line plain-English summary on each node">Summaries</label>
                 <input type="checkbox" id="toggleAutoFollow" checked style="margin-left:4px;">
@@ -392,6 +428,13 @@
                 <label for="toggleSimpleView" title="Hides router nodes that contain no reasoning, plus system/context noise">Simple View</label>
                 <input type="checkbox" id="toggleCollapseTools" style="margin-left:4px;">
                 <label for="toggleCollapseTools" title="Collapse tool calls into a compact summary node per step (or double-click any router/tool group node to toggle individually)">Collapse Tools</label>
+            </div>
+            <div class="tb-group" id="headerTopoScopeGroup" style="display:none;">
+                <span style="font-size:11px; font-weight:700; color:var(--muted-foreground,#64748b); margin-right:2px;">Scope:</span>
+                <div class="topo-scope-switch">
+                    <button id="btnHeaderScopeTurn" class="topo-scope-btn" title="Filter counts &amp; flow to the currently selected turn (t)">This Turn</button>
+                    <button id="btnHeaderScopeAll" class="topo-scope-btn active" title="Aggregate across all turns in the session (t)">All Turns</button>
+                </div>
             </div>
         </div>
 
@@ -418,9 +461,26 @@
             <div class="tb-group">
                 <button id="btnUpdate" title="Update Agent Tracer to the latest version">Update</button>
                 <button id="btnOverview" class="tb-btn ghost" title="Show the session summary">Overview</button>
-                <button id="btnExport" class="tb-btn ghost" title="Copy this request's activity as markdown">Copy</button>
+                <div class="export-wrap" id="exportWrap">
+                    <button id="btnExport" class="tb-btn ghost" title="Export or copy turn activity (Markdown, Mermaid diagram, or JSON)">Copy ▾</button>
+                    <div id="exportPopover" class="export-popover hidden">
+                        <button type="button" class="export-item" id="btnExportMarkdown">
+                            <span class="export-item-title">Copy Turn as Markdown</span>
+                            <span class="export-item-sub">Structured summary of prompt, tools &amp; reply</span>
+                        </button>
+                        <button type="button" class="export-item" id="btnExportMermaid">
+                            <span class="export-item-title">Copy Turn as Mermaid Diagram</span>
+                            <span class="export-item-sub">Flowchart of prompt, router, subagents &amp; tools</span>
+                        </button>
+                        <button type="button" class="export-item" id="btnExportJson">
+                            <span class="export-item-title">Download Trace Snapshot (.json)</span>
+                            <span class="export-item-sub">Full trajectory JSON for offline analysis</span>
+                        </button>
+                    </div>
+                </div>
                 <button id="btnTheme" class="tb-btn ghost" title="Toggle dark / light mode (d)">🌙 Dark</button>
                 <button id="btnDrawer" class="tb-btn ghost" title="Show / hide the inspector panel (i)">◫ Panel</button>
+                <button id="btnPopOut" class="tb-btn ghost" title="Open Agent Tracer in a full browser tab">↗</button>
                 <button id="btnKeys" class="tb-btn ghost" title="Keyboard shortcuts (?)">?</button>
             </div>
         </div>
@@ -1989,8 +2049,62 @@
         });
     }
     
+    let subagentLiveStatus = {};
+    let sessionTelemetry = null;
+    let lastTelemetryFetchAt = 0;
+
+    function formatLiveSubLine(meta) {
+        if (!meta || !meta.steps) return '';
+        const st = meta.status === 'RUNNING' ? 'LIVE' : (meta.status === 'ERROR' || meta.errors > 0 ? 'ERR' : 'DONE');
+        let line = '[' + st + ' · ' + meta.steps + ' steps · ' + (meta.tools || 0) + ' tools';
+        if (meta.status === 'RUNNING' && meta.lastTool) {
+            line += ' · ' + truncate(meta.lastTool, 14);
+        } else if (meta.durationMs && meta.durationMs >= 1000) {
+            line += ' · ' + formatDuration(meta.durationMs);
+        }
+        line += ']';
+        return line;
+    }
+
+    async function fetchSubagentsLiveStatus() {
+        if (!currentSessionSubagents || !currentSessionSubagents.length) return;
+        const ids = currentSessionSubagents
+            .map(s => s.id || s.conversationId || '')
+            .filter(id => id && !String(id).startsWith('pending:'));
+        if (!ids.length) return;
+        try {
+            const res = await fetch(apiUrl('api/subagents_status?ids=' + encodeURIComponent(ids.join(','))));
+            if (!res.ok) return;
+            const payload = await res.json();
+            const map = (payload && payload.subagents) || {};
+            const prevSig = JSON.stringify(subagentLiveStatus);
+            subagentLiveStatus = map;
+            if (JSON.stringify(map) !== prevSig && window.lastTranscript && window.lastTranscript.length) {
+                updateGraph(window.lastTranscript);
+            }
+        } catch (_) {}
+    }
+
+    async function fetchSessionTelemetry(force) {
+        if (!activeConvId) return;
+        const now = Date.now();
+        if (!force && (now - lastTelemetryFetchAt) < 6000) return;
+        lastTelemetryFetchAt = now;
+        try {
+            const res = await fetch(apiUrl('api/telemetry?conversationId=' + encodeURIComponent(activeConvId)));
+            if (!res.ok) return;
+            const data = await res.json();
+            const prevSig = JSON.stringify(sessionTelemetry);
+            sessionTelemetry = (data && data.available) ? data : null;
+            if (JSON.stringify(sessionTelemetry) !== prevSig && !hasSelection && viewMode === 'timeline') {
+                renderOverview();
+            }
+        } catch (_) {}
+    }
+
     initGraph();
     setInterval(loadData, 2000); 
+    setInterval(fetchSubagentsLiveStatus, 3000);
     setInterval(fetchAvailableConversations, 15000);
     setTimeout(fetchAvailableConversations, 400);
     loadData();
@@ -2006,6 +2120,9 @@
             emptyStateRendered = false;
             transcriptStore = [];
             currentSessionSubagents = [];
+            subagentLiveStatus = {};
+            sessionTelemetry = null;
+            lastTelemetryFetchAt = 0;
             selectedNodeId = null;
             hasSelection = false;
             window.lastTranscript = [];
@@ -2052,7 +2169,11 @@
                 // Cached so view-mode toggles can rebuild instantly without re-fetching.
                 window.lastTranscript = data;
                 // Only re-render when something actually arrived.
-                if (incoming.length) updateGraph(data);
+                if (incoming.length) {
+                    updateGraph(data);
+                    fetchSubagentsLiveStatus();
+                    fetchSessionTelemetry(false);
+                }
             }
         } catch (e) {
             console.error("Poll Error:", e);
@@ -2835,15 +2956,20 @@
 
                         const roleLabel = String(sa.role || sa.typeName || 'Subagent').replace(/^"+|"+$/g, '');
                         const badgePrefix = M > 1 ? `[${globalIdx + 1}/${M}] ` : '';
+                        const saId = sa.id || sa.conversationId || '';
+                        const liveMeta = (saId && !String(saId).startsWith('pending:')) ? subagentLiveStatus[saId] : null;
+                        const isLiveRunning = running || (liveMeta && liveMeta.status === 'RUNNING');
+                        const isLiveFailed = failed || (liveMeta && (liveMeta.status === 'ERROR' || liveMeta.errors > 0));
+
                         let title = 'SUBAGENT ' + badgePrefix + truncate(roleLabel, 22);
                         let color = { background: pal.subagent.bg, border: pal.subagent.border };
                         let fontColor = pal.subagent.font;
 
-                        if (failed) {
+                        if (isLiveFailed) {
                             title = 'FAILED SUBAGENT: ' + truncate(roleLabel, 18);
                             color = { background: pal.error.bg, border: pal.error.border };
                             fontColor = pal.error.font;
-                        } else if (running) {
+                        } else if (isLiveRunning) {
                             title = 'RUNNING SUBAGENT: ' + truncate(roleLabel, 18);
                             color = { background: pal.running.bg, border: pal.running.border };
                             fontColor = pal.running.font;
@@ -2854,14 +2980,16 @@
                             ? sa.prompt
                             : (targs.toolSummary ? targs.toolSummary : extractFallbackSummary(targs));
                         const tSummary = wrapText(truncate(subPromptText, 48), 28);
+                        const liveLine = liveMeta ? formatLiveSubLine(liveMeta) : '';
+                        const fullLabel = title + '\n' + tSummary + (liveLine ? ('\n' + liveLine) : '');
 
                         const visual = {
                             id: subNodeId,
-                            label: title + '\n' + tSummary,
+                            label: fullLabel,
                             shape: 'box',
                             color: color,
                             font: { color: fontColor, align: 'left', multi: false },
-                            shapeProperties: running ? { borderDashes: [5, 4] } : { borderDashes: false },
+                            shapeProperties: isLiveRunning ? { borderDashes: [5, 4] } : { borderDashes: false },
                             x: subX,
                             y: subY
                         };
@@ -2879,7 +3007,7 @@
                                     dashes: collapse ? [2, 4] : false
                                 });
                             }
-                        } else if (prior && (prior.running !== running || prior.failed !== failed)) {
+                        } else if (prior && (prior.running !== isLiveRunning || prior.failed !== isLiveFailed || prior._liveLine !== liveLine)) {
                             nodes.update(visual);
                         }
 
@@ -2891,8 +3019,9 @@
                             tool: tool,
                             result: resultText,
                             resultStep: resultStep,
-                            failed: failed,
-                            running: running,
+                            failed: isLiveFailed,
+                            running: isLiveRunning,
+                            _liveLine: liveLine,
                             subagent: sa,
                             subagents: [sa],
                             allSubagentsInStep: callSubs,
@@ -3257,6 +3386,27 @@
         }
     };
 
+    function formatTokenCount(n) {
+        const num = Number(n) || 0;
+        if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+        return String(num);
+    }
+
+    function renderSubagentLiveBadgeHtml(cid) {
+        if (!cid || String(cid).startsWith('pending:')) return '';
+        const meta = subagentLiveStatus[cid];
+        if (!meta || !meta.steps) return '';
+        const isRun = meta.status === 'RUNNING';
+        const isErr = meta.status === 'ERROR' || meta.errors > 0;
+        const cls = isErr ? ' error' : (isRun ? ' running' : '');
+        const tag = isErr ? 'ERROR' : (isRun ? 'RUNNING' : 'DONE');
+        let txt = tag + ' · ' + meta.steps + ' steps · ' + (meta.tools || 0) + ' tools';
+        if (isRun && meta.lastTool) txt += ' · ' + truncate(meta.lastTool, 16);
+        else if (meta.durationMs && meta.durationMs >= 1000) txt += ' · ' + formatDuration(meta.durationMs);
+        return '<div><span class="sub-live-badge' + cls + '">' + escapeHtml(txt) + '</span></div>';
+    }
+
     function renderOverview() {
         if (!inspectorEl) return;
         hasSelection = false;
@@ -3282,6 +3432,18 @@
                 tile('Slow (>10s)', s.slow, s.slow ? '#F9AB00' : undefined, s.slow ? 'ovTileSlow' : null, 'Browse slowest tool calls') +
                 '</div>';
 
+        if (sessionTelemetry && sessionTelemetry.available) {
+            const t = sessionTelemetry;
+            const outTotal = (t.outputTokens || 0) + (t.thinkingTokens || 0);
+            html += '<div class="inspector-section"><div class="inspector-label">Model &amp; Token Telemetry</div>' +
+                    '<div style="background:var(--secondary,#f8f9fa); border:1px solid var(--border,#eee); border-radius:8px; padding:10px 12px; font-size:12.5px; color:var(--foreground,#202124); line-height:1.75;">' +
+                    '<div style="display:flex; justify-content:space-between;"><span>Model:</span><strong>' + escapeHtml(t.model || 'Default') + '</strong></div>' +
+                    '<div style="display:flex; justify-content:space-between;"><span>Prompt Context:</span><strong>' + formatTokenCount(t.promptTokens) + ' tok <span style="color:#10b981;">(' + t.cacheHitPct + '% cached)</span></strong></div>' +
+                    '<div style="display:flex; justify-content:space-between;"><span>Output + Thinking:</span><strong>' + formatTokenCount(outTotal) + ' tok</strong></div>' +
+                    '<div style="display:flex; justify-content:space-between;"><span>Est. Session Cost:</span><strong>$' + Number(t.estimatedCostUsd || 0).toFixed(3) + '</strong></div>' +
+                    '</div></div>';
+        }
+
         html += '<div class="inspector-section"><div class="inspector-label">Time</div>';
         html += '<div style="font-size:13px; color:var(--foreground,#202124); line-height:1.8;">' +
                 '<div>Working time in tools: <strong>' + formatDuration(s.totalMs) + '</strong></div>';
@@ -3301,6 +3463,7 @@
                         '<div class="subagent-card-role">' + escapeHtml(sa.role || sa.typeName || 'Subagent') + '</div>' +
                         '<div class="subagent-card-meta">ID: ' + escapeHtml(sa.id.slice(0, 8)) + '…' +
                         (sa.prompt ? ' · ' + escapeHtml(truncate(sa.prompt, 52)) : '') + '</div>' +
+                        renderSubagentLiveBadgeHtml(sa.id) +
                         '</div>' +
                         '<button type="button" class="subagent-trace-btn ov-subagent-btn" data-sub-idx="' + idx + '">Trace Subagent →</button>' +
                         '</div>';
@@ -3521,15 +3684,54 @@
         return lines.join('\n');
     }
 
-    // Copying from this panel is awkward: it runs in an iframe, so
-    // navigator.clipboard is usually missing or rejected for want of a
-    // clipboard-write permission.
-    //
-    // Order matters here. execCommand('copy') requires the browser's "user
-    // activation" from the click that triggered it, and *awaiting* the async
-    // clipboard API first consumes that activation -- so trying the modern API
-    // first silently guarantees the fallback fails too. Run the synchronous
-    // path first, while the gesture is still live.
+    function requestAsMermaid(turn) {
+        const targetTurn = turn || (window.graphTurns && window.graphTurns[window.graphTurns.length - 1]);
+        if (!targetTurn) return '';
+        const q = (s) => String(s || '').replace(/"/g, "'").replace(/\n+/g, ' ').trim();
+        const lines = ['```mermaid', 'flowchart LR'];
+        lines.push('  U["User Request #' + (targetTurn.num || 1) + ': ' + q(truncate(targetTurn.request || 'Prompt', 48)) + '"]');
+        lines.push('  R["Agent Router"]');
+        lines.push('  U --> R');
+        if (targetTurn.tools && targetTurn.tools.length) {
+            targetTurn.tools.forEach((t, idx) => {
+                const tid = 'T' + (idx + 1);
+                const dur = t.ms ? (' (' + formatDuration(t.ms) + ')') : '';
+                const st = t.failed ? ' [FAILED]' : '';
+                lines.push('  ' + tid + '["' + q(t.name + dur + st) + '"]');
+                lines.push('  R --> ' + tid);
+            });
+        }
+        if (targetTurn.reply) {
+            lines.push('  A["Final Reply: ' + q(truncate(targetTurn.reply, 48)) + '"]');
+            if (targetTurn.tools && targetTurn.tools.length) {
+                lines.push('  T' + targetTurn.tools.length + ' --> A');
+            } else {
+                lines.push('  R --> A');
+            }
+        }
+        lines.push('```');
+        return lines.join('\n');
+    }
+
+    function downloadTraceJson() {
+        const payload = {
+            conversationId: activeConvId,
+            exportedAt: new Date().toISOString(),
+            telemetry: sessionTelemetry,
+            subagents: currentSessionSubagents,
+            steps: transcriptStore,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'agent-trace-' + (activeConvId ? activeConvId.slice(0, 8) : 'session') + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
     function copySync(text) {
         try {
             const ta = document.createElement('textarea');
@@ -3547,8 +3749,6 @@
         }
     }
 
-    // Last resort: put the text on screen, pre-selected, so the user can still
-    // get it out with Ctrl+C instead of hitting a dead end.
     function showCopyFallback(text) {
         if (!inspectorEl) return;
         hasSelection = true;
@@ -3572,22 +3772,61 @@
         setTimeout(() => { btn.textContent = btn.dataset.label || original; }, 1600);
     }
 
+    function copyTextWithFeedback(text, label) {
+        if (!text) return;
+        const btn = document.getElementById('btnExport');
+        if (copySync(text)) { if (btn) flashButton(btn, label || 'Copied'); return; }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => { if (btn) flashButton(btn, label || 'Copied'); })
+                .catch(() => { if (btn) flashButton(btn, 'Copy blocked'); showCopyFallback(text); });
+            return;
+        }
+        if (btn) flashButton(btn, 'Copy blocked');
+        showCopyFallback(text);
+    }
+
     const btnExport = document.getElementById('btnExport');
-    if (btnExport) {
-        // Deliberately not an async function: the handler must reach copySync
-        // without an intervening await.
-        btnExport.addEventListener('click', () => {
-            const md = requestAsMarkdown(activeGoalTurn);
-            if (!md) return;
-            if (copySync(md)) { flashButton(btnExport, 'Copied'); return; }
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(md)
-                    .then(() => flashButton(btnExport, 'Copied'))
-                    .catch(() => { flashButton(btnExport, 'Copy blocked'); showCopyFallback(md); });
-                return;
+    const exportPopover = document.getElementById('exportPopover');
+    const btnExportMarkdown = document.getElementById('btnExportMarkdown');
+    const btnExportMermaid = document.getElementById('btnExportMermaid');
+    const btnExportJson = document.getElementById('btnExportJson');
+
+    if (btnExport && exportPopover) {
+        btnExport.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exportPopover.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!exportPopover.classList.contains('hidden') && !e.target.closest('#exportWrap')) {
+                exportPopover.classList.add('hidden');
             }
-            flashButton(btnExport, 'Copy blocked');
-            showCopyFallback(md);
+        });
+    }
+    if (btnExportMarkdown) {
+        btnExportMarkdown.addEventListener('click', () => {
+            if (exportPopover) exportPopover.classList.add('hidden');
+            copyTextWithFeedback(requestAsMarkdown(activeGoalTurn), 'Copied MD');
+        });
+    }
+    if (btnExportMermaid) {
+        btnExportMermaid.addEventListener('click', () => {
+            if (exportPopover) exportPopover.classList.add('hidden');
+            copyTextWithFeedback(requestAsMermaid(activeGoalTurn), 'Copied Mermaid');
+        });
+    }
+    if (btnExportJson) {
+        btnExportJson.addEventListener('click', () => {
+            if (exportPopover) exportPopover.classList.add('hidden');
+            downloadTraceJson();
+            if (btnExport) flashButton(btnExport, 'Saved JSON');
+        });
+    }
+
+    const btnPopOut = document.getElementById('btnPopOut');
+    if (btnPopOut) {
+        btnPopOut.addEventListener('click', () => {
+            window.open(window.location.href, '_blank');
         });
     }
 
@@ -4173,12 +4412,23 @@
         return topoScope === 'turn' ? activeTurnEvents() : topoEvents;
     }
 
+    const btnHeaderScopeTurn = document.getElementById('btnHeaderScopeTurn');
+    const btnHeaderScopeAll = document.getElementById('btnHeaderScopeAll');
+    const timelineTogglesGroup = document.getElementById('timelineTogglesGroup');
+    const headerTopoScopeGroup = document.getElementById('headerTopoScopeGroup');
+
     function updateScopeSwitchUI() {
         const reqNum = activeTurnReqNum();
+        const turnLabel = 'This Turn' + (reqNum ? ' #' + reqNum : '');
         if (btnTopoScopeAll) btnTopoScopeAll.classList.toggle('active', topoScope === 'all');
         if (btnTopoScopeTurn) {
             btnTopoScopeTurn.classList.toggle('active', topoScope === 'turn');
-            btnTopoScopeTurn.textContent = 'This Turn' + (reqNum ? ' #' + reqNum : '');
+            btnTopoScopeTurn.textContent = turnLabel;
+        }
+        if (btnHeaderScopeAll) btnHeaderScopeAll.classList.toggle('active', topoScope === 'all');
+        if (btnHeaderScopeTurn) {
+            btnHeaderScopeTurn.classList.toggle('active', topoScope === 'turn');
+            btnHeaderScopeTurn.textContent = turnLabel;
         }
     }
 
@@ -4321,6 +4571,8 @@
 
     if (btnTopoScopeAll) btnTopoScopeAll.addEventListener('click', () => setTopoScope('all'));
     if (btnTopoScopeTurn) btnTopoScopeTurn.addEventListener('click', () => setTopoScope('turn'));
+    if (btnHeaderScopeAll) btnHeaderScopeAll.addEventListener('click', () => setTopoScope('all'));
+    if (btnHeaderScopeTurn) btnHeaderScopeTurn.addEventListener('click', () => setTopoScope('turn'));
 
     function setViewMode(mode) {
         viewMode = (mode === 'topology' || mode === 'simple_topo') ? mode : 'timeline';
@@ -4332,6 +4584,8 @@
         if (btnViewSimpleTopo) btnViewSimpleTopo.classList.toggle('active', viewMode === 'simple_topo');
         if (topoSvgEl) topoSvgEl.style.display = viewMode === 'simple_topo' ? 'none' : 'block';
         if (topoSimpleSvgEl) topoSimpleSvgEl.style.display = viewMode === 'simple_topo' ? 'block' : 'none';
+        if (timelineTogglesGroup) timelineTogglesGroup.style.display = isAnyTopo ? 'none' : 'flex';
+        if (headerTopoScopeGroup) headerTopoScopeGroup.style.display = isAnyTopo ? 'inline-flex' : 'none';
 
         if (isAnyTopo) {
             // Cross-view selection sync: if a node was selected in Timeline, focus its event in Topology
@@ -5556,10 +5810,12 @@
                 const seqNum = turnCallSeqMap[t.key] || null;
                 const hasCalls = t.calls > 0;
                 const isSubRolePill = /^sub:/.test(t.key) && !!topoSubagentByRole[t.key];
+                const subInfo = isSubRolePill ? topoSubagentByRole[t.key] : null;
+                const subLive = (subInfo && subInfo.id && !String(subInfo.id).startsWith('pending:')) ? subagentLiveStatus[subInfo.id] : null;
 
                 const pFill = isFocused ? c.accentSoft : (hasCalls ? pal.pillBg : pal.pillIdleBg);
-                const pStroke = t.errors > 0 ? '#EF4444' : (isFocused ? c.accent : (hasCalls ? c.accent : pal.pillBorder));
-                const pStrokeW = isFocused ? '2.2' : (hasCalls ? '1.4' : '1');
+                const pStroke = (t.errors > 0 || (subLive && subLive.errors > 0)) ? '#EF4444' : ((subLive && subLive.status === 'RUNNING') ? '#F59E0B' : (isFocused ? c.accent : (hasCalls ? c.accent : pal.pillBorder)));
+                const pStrokeW = (isFocused || (subLive && subLive.status === 'RUNNING')) ? '2.2' : (hasCalls ? '1.4' : '1');
                 const pOpacity = hasCalls || isFocused ? '1' : '0.72';
                 const midY = py + (pillH / 2);
                 const txtY = py + (isCompactPills ? 15.5 : 19.5);
@@ -5576,14 +5832,15 @@
                 }
 
                 const maxLabelChars = seqNum ? 9 : 11;
-                const badgeStr = (t.errors > 0 ? '! ' : '') + (isSubRolePill ? '↗' : (t.calls > 0 ? ('×' + t.calls) : ''));
+                const subBadgeText = subLive && subLive.steps ? ((subLive.status === 'RUNNING' ? 'LIVE ' : '') + subLive.steps + 's↗') : '↗';
+                const badgeStr = (t.errors > 0 ? '! ' : '') + (isSubRolePill ? subBadgeText : (t.calls > 0 ? ('×' + t.calls) : ''));
                 clustersSvg += '<text x="' + textStartX + '" y="' + txtY + '" fill="' + (hasCalls ? pal.text : pal.subtle) + '" font-size="' + fSize + '" font-weight="' + (hasCalls ? '700' : '600') + '" font-family="ui-monospace, monospace">' + escapeHtml(truncate(t.short, maxLabelChars)) + '</text>';
 
                 if (badgeStr) {
                     clustersSvg += '<text x="' + (px + pillW - 7) + '" y="' + txtY + '" text-anchor="end" fill="' + (t.errors > 0 ? '#EF4444' : c.accent) + '" font-size="' + (isCompactPills ? '11.5' : '12') + '" font-weight="800" font-family="ui-monospace, monospace">' + escapeHtml(badgeStr) + '</text>';
                 }
                 const pillTip = isSubRolePill
-                    ? (t.rawName + ' (Spawned Subagent — Click to inspect, double-click to trace subagent trajectory)')
+                    ? (t.rawName + (subLive && subLive.steps ? (' [' + subLive.status + ' · ' + subLive.steps + ' steps · ' + (subLive.tools || 0) + ' tools]') : '') + ' — Click to inspect, double-click to trace subagent trajectory')
                     : (t.rawName + ' (' + t.calls + ' calls' + (t.lastTarget ? ' · Latest: ' + t.lastTarget : '') + ') — Click to inspect');
                 clustersSvg += '<title>' + escapeHtml(pillTip) + '</title></g>';
             });
@@ -6414,6 +6671,7 @@
                             '<div class="subagent-card-role">[' + (idx + 1) + '/' + data._subagents.length + '] ' + escapeHtmlRaw(s.role) + (s.typeName ? ' (' + escapeHtmlRaw(s.typeName) + ')' : '') + '</div>' +
                             (s.prompt ? '<div style="font-size:11.5px; color:var(--foreground,#202124); margin-top:2px;">' + escapeHtmlRaw(truncate(s.prompt, 110)) + '</div>' : '') +
                             '<div class="subagent-card-meta">' + escapeHtmlRaw(isPending ? 'Spawning subagent session…' : cid) + '</div>' +
+                            renderSubagentLiveBadgeHtml(cid) +
                             '</div>' +
                             (isPending ? '' : '<button class="subagent-trace-btn inspector-drill-sub-btn" data-cid="' + escapeHtmlRaw(cid) + '" data-role="' + escapeHtmlRaw(s.role) + '">Trace Subagent →</button>') +
                             '</div>';
@@ -6539,6 +6797,7 @@
                             '<div class="subagent-card-role">' + (subList.length > 1 ? '[' + (idx + 1) + '/' + subList.length + '] ' : '') + escapeHtmlRaw(s.role) + (s.typeName ? ' (' + escapeHtmlRaw(s.typeName) + ')' : '') + '</div>' +
                             (s.prompt ? '<div style="font-size:11.5px; color:var(--foreground,#202124); margin-top:2px;">' + escapeHtmlRaw(truncate(s.prompt, 110)) + '</div>' : '') +
                             '<div class="subagent-card-meta">' + escapeHtmlRaw(isPending ? 'Spawning subagent session…' : cid) + '</div>' +
+                            renderSubagentLiveBadgeHtml(cid) +
                             '</div>' +
                             (isPending ? '' : '<button class="subagent-trace-btn inspector-drill-sub-btn" data-cid="' + escapeHtmlRaw(cid) + '" data-role="' + escapeHtmlRaw(s.role) + '">Trace Subagent →</button>') +
                             '</div>';
@@ -6546,8 +6805,58 @@
                 text += '</div>';
             }
 
+            // Colour-coded unified diff view for replace_file_content and write_to_file
+            let renderedDiffHtml = '';
+            if (tool.name === 'replace_file_content' || tool.name === 'write_to_file') {
+                const rawPath = unquoteArg(targs.TargetFile || '');
+                const shortFile = rawPath ? rawPath.split('/').slice(-2).join('/') : 'file';
+                let diffLines = [];
+                let addCount = 0;
+                let delCount = 0;
+                const diffMatch = (data.result || '').match(/\[diff_block_start\]\s*([\s\S]*?)\s*\[diff_block_end\]/);
+                if (diffMatch && diffMatch[1]) {
+                    diffLines = diffMatch[1].split('\n');
+                } else if (tool.name === 'replace_file_content' && (targs.TargetContent || targs.ReplacementContent)) {
+                    const startL = targs.StartLine || 1;
+                    const endL = targs.EndLine || startL;
+                    diffLines.push('@@ -' + startL + ',' + endL + ' @@');
+                    String(targs.TargetContent || '').split('\n').forEach(l => diffLines.push('-' + l));
+                    String(targs.ReplacementContent || '').split('\n').forEach(l => diffLines.push('+' + l));
+                } else if (tool.name === 'write_to_file' && targs.CodeContent) {
+                    const codeLines = String(targs.CodeContent).split('\n');
+                    diffLines.push('@@ +1,' + codeLines.length + ' (new file) @@');
+                    codeLines.slice(0, 120).forEach(l => diffLines.push('+' + l));
+                    if (codeLines.length > 120) diffLines.push('@@ … ' + (codeLines.length - 120) + ' more lines … @@');
+                }
+                if (diffLines.length) {
+                    let bodyRows = '';
+                    diffLines.forEach(line => {
+                        let cls = 'ctx';
+                        if (line.startsWith('@@')) cls = 'hunk';
+                        else if (line.startsWith('+') && !line.startsWith('+++')) { cls = 'add'; addCount++; }
+                        else if (line.startsWith('-') && !line.startsWith('---')) { cls = 'del'; delCount++; }
+                        bodyRows += '<div class="diff-line ' + cls + '">' + escapeHtmlRaw(line || ' ') + '</div>';
+                    });
+                    renderedDiffHtml =
+                        '<div class="inspector-section"><div class="inspector-label">File Changes</div>' +
+                        '<div class="diff-box">' +
+                        '<div class="diff-header"><span>' + escapeHtmlRaw(shortFile) + '</span>' +
+                        '<span class="diff-stats"><span class="diff-stat-add">+' + addCount + '</span><span class="diff-stat-del">-' + delCount + '</span></span></div>' +
+                        '<div class="diff-body">' + bodyRows + '</div>' +
+                        '</div></div>';
+                }
+            }
+            if (renderedDiffHtml) {
+                text += renderedDiffHtml;
+            }
+
             // Remaining arguments shown as a friendly label/value list instead of JSON.
             const skip = { toolAction: 1, toolSummary: 1 };
+            if (renderedDiffHtml) {
+                skip.TargetContent = 1;
+                skip.ReplacementContent = 1;
+                skip.CodeContent = 1;
+            }
             const detailKeys = Object.keys(targs).filter(k => !skip[k]);
             if (detailKeys.length) {
                 let rows = '';
