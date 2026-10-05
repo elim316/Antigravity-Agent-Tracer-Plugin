@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Agent Tracer">
+  <title>Agent Tracer</title>
+  <defs>
+    <linearGradient id="at-bg" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#070B14"/>
+    </linearGradient>
+    <linearGradient id="at-ring" x1="14" y1="14" x2="114" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity="0.65"/>
+      <stop offset="0.5" stop-color="#A855F7" stop-opacity="0.65"/>
+      <stop offset="1" stop-color="#34D399" stop-opacity="0.65"/>
+    </linearGradient>
+    <linearGradient id="at-core" x1="46" y1="46" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C084FC"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Circular dark badge with ~10% margin around 128x128 frame -->
+  <circle cx="64" cy="64" r="56" fill="url(#at-bg)" stroke="url(#at-ring)" stroke-width="2.5"/>
+
+  <!-- Subtle orbital dashed guide ring -->
+  <circle cx="64" cy="64" r="42" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="4 4"/>
+
+  <!-- Trajectory flow edges -->
+  <!-- User Request (top-left) -> Planner Core -->
+  <path d="M 32 40 C 44 40, 48 56, 64 64" fill="none" stroke="#FBBF24" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- Planner Core -> Agent Reply (bottom-left) -->
+  <path d="M 64 64 C 48 72, 44 88, 32 88" fill="none" stroke="#34D399" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- Planner Core -> Tool Nodes (right fan-out) -->
+  <path d="M 64 64 C 78 56, 84 38, 96 38" fill="none" stroke="#38BDF8" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M 64 64 L 100 64" fill="none" stroke="#60A5FA" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M 64 64 C 78 72, 84 90, 96 90" fill="none" stroke="#818CF8" stroke-width="2.6" stroke-linecap="round"/>
+
+  <!-- Left I/O Nodes -->
+  <!-- User Request Node (Amber) -->
+  <circle cx="30" cy="40" r="8" fill="#1E293B" stroke="#FBBF24" stroke-width="3"/>
+  <circle cx="30" cy="40" r="3" fill="#FBBF24"/>
+
+  <!-- Agent Reply Node (Emerald) -->
+  <circle cx="30" cy="88" r="8" fill="#1E293B" stroke="#34D399" stroke-width="3"/>
+  <circle cx="30" cy="88" r="3" fill="#34D399"/>
+
+  <!-- Right Capability / Subagent Nodes -->
+  <circle cx="96" cy="38" r="7.5" fill="#1E293B" stroke="#38BDF8" stroke-width="2.8"/>
+  <circle cx="96" cy="38" r="2.8" fill="#38BDF8"/>
+
+  <circle cx="101" cy="64" r="7.5" fill="#1E293B" stroke="#60A5FA" stroke-width="2.8"/>
+  <circle cx="101" cy="64" r="2.8" fill="#60A5FA"/>
+
+  <circle cx="96" cy="90" r="7.5" fill="#1E293B" stroke="#818CF8" stroke-width="2.8"/>
+  <circle cx="96" cy="90" r="2.8" fill="#818CF8"/>
+
+  <!-- Central Agent Planner Core Hub -->
+  <circle cx="64" cy="64" r="19" fill="#A855F7" fill-opacity="0.18" stroke="#C084FC" stroke-width="1.5" stroke-dasharray="3 2.5"/>
+  <circle cx="64" cy="64" r="13" fill="url(#at-core)" stroke="#F3E8FF" stroke-width="2"/>
+  <circle cx="64" cy="64" r="4.5" fill="#FFFFFF"/>
+</svg>

@@ -1,4 +1,11 @@
 {
   "name": "agent-tracer-plugin",
-  "description": "Live Trajectory Flow Graph visualizing agent thoughts, tools, and subagents globally"
+  "displayName": "Agent Tracer",
+  "description": "Live trajectory timeline, architectural blueprint, and orbital topology visualiser for Jetski agent thoughts, tools, and parallel subagents.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Open the Agent Tracer panel to inspect this conversation's trajectory",
+    "Summarise the slowest tool calls and any errors in this session",
+    "Run parallel subagents so I can watch them fan out in Agent Tracer"
+  ]
 }
