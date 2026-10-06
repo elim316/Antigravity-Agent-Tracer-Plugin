@@ -390,7 +390,7 @@
         .markdown-body code { background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 4px; font-family: ui-monospace, monospace; }
     </style>
 </head>
-<body>
+<body class="inspector-collapsed">
 
 <div id="left">
     <div class="header">
@@ -479,7 +479,7 @@
                     </div>
                 </div>
                 <button id="btnTheme" class="tb-btn ghost" title="Toggle dark / light mode (d)">🌙 Dark</button>
-                <button id="btnDrawer" class="tb-btn ghost" title="Show / hide the inspector panel (i)">◫ Panel</button>
+                <button id="btnDrawer" class="tb-btn ghost" title="Show / hide the inspector panel (i)">◫ Show</button>
                 <button id="btnPopOut" class="tb-btn ghost" title="Open Agent Tracer in a full browser tab">↗</button>
                 <button id="btnKeys" class="tb-btn ghost" title="Keyboard shortcuts (?)">?</button>
             </div>
@@ -811,7 +811,7 @@
 <div id="right">
     <div id="right-bar" title="Click to show or hide the inspector panel (i)">
         <span id="right-bar-label">Inspector &amp; Overview</span>
-        <span id="right-bar-toggle">▾ Hide panel</span>
+        <span id="right-bar-toggle">▴ Expand panel</span>
     </div>
     <div id="inspector">
         <div class="empty-state">
@@ -827,7 +827,7 @@
     const rightBar = document.getElementById('right-bar');
     const rightBarToggle = document.getElementById('right-bar-toggle');
     const btnDrawer = document.getElementById('btnDrawer');
-    let drawerCollapsed = false;
+    let drawerCollapsed = true;
 
     function setDrawerCollapsed(collapsed) {
         drawerCollapsed = !!collapsed;
@@ -1507,7 +1507,7 @@
         // Paint immediately rather than waiting for the pan animation to land.
         activeGoalTurn = turn;
         paintGoalBar(turn);
-        if (turn.nodeId && rawDataMap[turn.nodeId]) renderInspector(rawDataMap[turn.nodeId]);
+        if (turn.nodeId && rawDataMap[turn.nodeId]) renderInspector(rawDataMap[turn.nodeId], turn.nodeId, false);
     }
 
     function paintGoalBar(turn) {
@@ -4855,7 +4855,7 @@
             renderTopoHud();
             renderTopoWaterfall();
             if (selectedNodeId && hasSelection && rawDataMap[selectedNodeId]) {
-                renderInspector(rawDataMap[selectedNodeId], selectedNodeId);
+                renderInspector(rawDataMap[selectedNodeId], selectedNodeId, false);
             } else if (!hasSelection || topoShowingLog) {
                 renderTopoLogPanel();
             }
@@ -4876,7 +4876,7 @@
                 }
             }, 30);
             if (selectedNodeId && hasSelection && rawDataMap[selectedNodeId]) {
-                renderInspector(rawDataMap[selectedNodeId], selectedNodeId);
+                renderInspector(rawDataMap[selectedNodeId], selectedNodeId, false);
             } else if (!hasSelection) {
                 renderOverview();
             }
@@ -6164,7 +6164,7 @@
                 renderTopoHud();
                 renderTopoWaterfall();
                 const nodeId = topoLastNodeForTool[tKey];
-                if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId);
+                if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId, false);
             });
             clustersLayer.addEventListener('dblclick', (e) => {
                 const el = e.target.closest('.topo-pill-node');
@@ -6176,8 +6176,11 @@
                     const cid = sa.id || sa.conversationId;
                     if (cid && !String(cid).startsWith('pending:')) {
                         window.drillIntoSubagent(cid, sa.role || sa.typeName || 'Subagent');
+                        return;
                     }
                 }
+                const nodeId = tKey ? topoLastNodeForTool[tKey] : null;
+                if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId, true);
             });
         }
     }
@@ -6343,7 +6346,7 @@
                     renderTopologySVG();
                     renderTopoWaterfall();
                     renderTopoHud();
-                    if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId);
+                    if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId, false);
                 });
                 g.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
@@ -6363,9 +6366,11 @@
                             const cid = s.id || s.conversationId;
                             if (cid && !String(cid).startsWith('pending:')) {
                                 drillIntoSubagent(cid, s.role);
+                                return;
                             }
                         }
                     }
+                    if (nodeId && rawDataMap[nodeId]) renderInspector(rawDataMap[nodeId], nodeId, true);
                 });
                 container.appendChild(g);
             } else if (isActive && container.lastChild !== g) {
@@ -6879,7 +6884,7 @@
         updateTopology(window.lastTranscript);
     }
 
-    function renderInspector(data, nodeIdOpt) {
+    function renderInspector(data, nodeIdOpt, forceOpenOpt) {
         hasSelection = true;
         if (typeof topoShowingLog !== 'undefined') topoShowingLog = false;
         if (!data) return;
@@ -6904,7 +6909,7 @@
             try { network.selectNodes([selectedNodeId]); } catch (_) {}
         }
 
-        openInspectorDrawer('Step Inspector', true);
+        openInspectorDrawer('Step Inspector', forceOpenOpt !== false);
         let text = '';
         const escapeHtmlRaw = escapeHtml;
         
