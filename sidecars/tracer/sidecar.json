@@ -1,6 +1,6 @@
 {
   "display_name": "Agent Tracer",
-  "description": "Live Trajectory Timeline, Architectural Blueprint, and Simplified Orbital Topology Graph (v3.2)",
+  "description": "Live Trajectory Timeline, Architectural Blueprint, and Simplified Orbital Topology Graph (v3.3)",
   "command": "python3",
   "args": ["server.py"],
   "restart_policy": "always",

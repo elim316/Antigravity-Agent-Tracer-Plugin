@@ -2799,7 +2799,7 @@
                         const resultText = resultStep ? (resultStep.content || '') : '';
                         const failed = isFailure(resultText, tool.name);
                         const running = step.status === 'RUNNING' || (!resultStep && step.status !== 'DONE');
-                        const tTiming = parseTiming(resultText, step, resultStep);
+                        const tTiming = parseTiming(resultText, step, resultStep, tool.name);
                         const callSubs = extractSubagentsFromStep(step, tool, resultText);
                         callSubs.forEach(sa => {
                             stepSubsAll.push(sa);
@@ -3279,25 +3279,50 @@
     // ISO timestamps. That is a far more precise source for how long a tool
     // actually took than diffing the surrounding step timestamps, so prefer it
     // and only fall back to step metadata when the preamble is absent.
-    function parseTiming(rawText, step, resultStep) {
-        const cacheKey = (rawText ? rawText.length : 0) + ':' + (step ? step.created_at : '') + ':' + (resultStep ? resultStep.created_at : '');
+    function parseTiming(rawText, step, resultStep, toolName) {
+        const tName = toolName || '';
+        const cacheKey = tName + ':' + (rawText ? rawText.length : 0) + ':' + (step ? step.created_at : '') + ':' + (resultStep ? resultStep.created_at : '');
         if (resultStep && resultStep._timingCacheKey === cacheKey) {
             return resultStep._timingCached;
         }
-        let start = null, end = null;
+        let start = null, end = null, fromPreamble = false;
         if (rawText) {
-            const c = rawText.match(/^\s*Created At:\s*(\S+)/m);
-            const d = rawText.match(/^\s*Completed At:\s*(\S+)/m);
+            const head = rawText.slice(0, 240);
+            const c = head.match(/^\s*Created At:\s*(\S+)/m);
+            const d = head.match(/^\s*Completed At:\s*(\S+)/m);
             if (c) start = Date.parse(c[1]);
             if (d) end = Date.parse(d[1]);
+            if (start && end) fromPreamble = true;
         }
         if ((!start || !end) && step && resultStep && step.created_at && resultStep.created_at) {
             start = Date.parse(step.created_at);
             end = Date.parse(resultStep.created_at);
         }
-        const out = (!start || !end || isNaN(start) || isNaN(end) || end < start)
-            ? null
-            : { start: start, end: end, ms: end - start };
+        let out = null;
+        if (start && end && !isNaN(start) && !isNaN(end) && end >= start) {
+            let ms = end - start;
+            let approvalWait = false;
+            const isLocalFileTool = (
+                tName === 'view_file' ||
+                tName === 'replace_file_content' ||
+                tName === 'write_to_file' ||
+                tName === 'list_dir' ||
+                tName === 'notebook_edit'
+            );
+            if (tName === 'ask_question') {
+                approvalWait = true;
+                ms = 0;
+            } else if (isLocalFileTool && ms > 8000) {
+                // Local file reads/edits execute in <1s once approved; multi-second/minute deltas are human permission wait time.
+                approvalWait = true;
+                ms = Math.min(ms, 400);
+            } else if (!fromPreamble && ms > 25000 && tName !== 'invoke_subagent') {
+                // Fallback step timestamp delta >25s without a tool preamble includes human approval or batch queueing wait.
+                approvalWait = true;
+                ms = Math.min(ms, 2000);
+            }
+            out = { start: start, end: end, ms: ms, rawMs: end - start, approvalWait: approvalWait };
+        }
         if (resultStep) {
             resultStep._timingCacheKey = cacheKey;
             resultStep._timingCached = out;
@@ -5209,11 +5234,23 @@
                 const hasTools = !!(step.tool_calls && step.tool_calls.length > 0);
                 const hasReply = !!(step.content && step.content.trim());
                 const isFinalReply = !hasTools && hasReply;
+                const resSteps = hasTools ? resultsFor[step.step_index] : null;
 
                 if (step.thinking && hasTools) {
                     const thought = extractMacroSummary(step.thinking);
                     topoLatestIntentText = thought;
-                    const thinkMs = (stepDeltaMs > 0 && stepDeltaMs < 180000) ? stepDeltaMs : 0;
+                    let thinkMs = (stepDeltaMs > 0 && stepDeltaMs < 180000) ? stepDeltaMs : 0;
+                    if (thinkMs === 0 && resSteps && resSteps[0]) {
+                        const firstToolName = step.tool_calls[0] ? step.tool_calls[0].name : '';
+                        const firstTiming = parseTiming(resSteps[0].content || '', step, resSteps[0], firstToolName);
+                        if (firstTiming && firstTiming.start > ts && (firstTiming.start - ts) < 180000) {
+                            thinkMs = firstTiming.start - ts;
+                        }
+                    }
+                    if (thinkMs === 0 && step.thinking.length > 0) {
+                        // Timestamps in transcript.jsonl have 1s resolution; estimate sub-second/multi-second deliberation from thought length.
+                        thinkMs = Math.max(400, Math.min(3200, Math.round(step.thinking.length * 3.5)));
+                    }
                     const ev = {
                         id: 'ev_think_' + step.step_index,
                         message_type: 'AGENT_THINKING',
@@ -5228,7 +5265,6 @@
                 }
 
                 if (hasTools) {
-                    const resSteps = resultsFor[step.step_index];
                     step.tool_calls.forEach((tool, tIdx) => {
                         const toolId = pId + '_tool_' + tIdx;
                         const targs = tool.arguments || tool.args || {};
@@ -5299,7 +5335,7 @@
 
                         if (resultStep) {
                             const failed = isFailure(resultText, tool.name);
-                            const timing = parseTiming(resultText, step, resultStep);
+                            const timing = parseTiming(resultText, step, resultStep, tool.name);
                             const sumObj = summarizeResult(resultText, tool.name, failed);
                             const resTs = resultStep.created_at ? Date.parse(resultStep.created_at) : ts + 200;
                             const resType = isSub ? 'SUBAGENT_RESULT' : (failed ? 'TOOL_ERROR' : 'TOOL_RESULT');
@@ -5344,7 +5380,10 @@
                 if (isFinalReply) {
                     const cleanReply = extractGist(step.content, 2, 140) || step.content.replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').trim();
                     topoLatestReplyText = cleanReply;
-                    const replyMs = (stepDeltaMs > 0 && stepDeltaMs < 180000) ? stepDeltaMs : 0;
+                    let replyMs = (stepDeltaMs > 0 && stepDeltaMs < 180000) ? stepDeltaMs : 0;
+                    if (replyMs === 0 && step.content) {
+                        replyMs = Math.max(350, Math.min(2500, Math.round(step.content.length * 2.5)));
+                    }
                     const ev = {
                         id: 'ev_reply_' + step.step_index,
                         message_type: 'AGENT_REPLY',
@@ -5538,39 +5577,38 @@
         const segments = [];
         let thinkTotalMs = 0;
         let toolTotalMs = 0;
+        // Sub-linear damping prevents a single 5s tool call from crushing 400ms thinking/file steps into 1px slivers.
+        const dampWeight = (msVal, floorMs) => Math.pow(Math.max(msVal || floorMs, floorMs), 0.58);
 
         turnEvs.forEach(ev => {
             if (ev.message_type === 'AGENT_THINKING') {
-                const ms = Math.max(ev.durationMs || 250, 150);
                 thinkTotalMs += (ev.durationMs || 0);
                 segments.push({
                     ev: ev,
                     label: 'Think',
                     fullLabel: 'Model Thinking',
                     ms: ev.durationMs || 0,
-                    weight: ms,
+                    weight: dampWeight(ev.durationMs, 350),
                     color: '#6366F1',
                 });
             } else if (ev.message_type === 'TOOL_RESULT' || ev.message_type === 'SUBAGENT_RESULT' || ev.message_type === 'TOOL_ERROR') {
-                const ms = Math.max(ev.durationMs || 300, 180);
                 toolTotalMs += (ev.durationMs || 0);
                 segments.push({
                     ev: ev,
                     label: ev.tool || ev.rawTool || 'tool',
                     fullLabel: ev.tool || ev.rawTool || 'tool',
                     ms: ev.durationMs || 0,
-                    weight: ms,
+                    weight: dampWeight(ev.durationMs, 350),
                     color: ev.failed || ev.message_type === 'TOOL_ERROR' ? '#EF4444' : (ev.accentColor || '#3B82F6'),
                 });
             } else if (ev.message_type === 'AGENT_REPLY') {
-                const ms = Math.max(ev.durationMs || 250, 150);
                 thinkTotalMs += (ev.durationMs || 0);
                 segments.push({
                     ev: ev,
                     label: 'Reply',
                     fullLabel: 'Agent Response',
                     ms: ev.durationMs || 0,
-                    weight: ms,
+                    weight: dampWeight(ev.durationMs, 350),
                     color: '#14B8A6',
                 });
             }
@@ -5585,6 +5623,7 @@
         const totalWeight = segments.reduce((acc, s) => acc + s.weight, 0) || 1;
         const selectedEv = (topoSelectedEvIdx >= 0 && topoEvents[topoSelectedEvIdx]) ? topoEvents[topoSelectedEvIdx] : null;
         const minW = segments.length > 28 ? 3 : (segments.length > 14 ? 6 : 12);
+        const maxSegStyle = segments.length <= 3 ? ' max-width:220px;' : '';
 
         let trackHtml = '';
         segments.forEach((seg, idx) => {
@@ -5593,8 +5632,12 @@
             const durTxt = seg.ms > 0 ? formatDuration(seg.ms) : '<100ms';
             const tip = seg.fullLabel + ' · ' + durTxt + (seg.ev.targetHint ? ' (' + seg.ev.targetHint + ')' : '') + ' — Click to preview, double-click to inspect';
             const showInlineText = pct >= 9 && segments.length <= 24;
-            const inlineLabel = showInlineText ? escapeHtml(truncate(seg.label, pct >= 18 ? 14 : 8)) : '';
-            trackHtml += '<div class="wf-seg' + (isSel ? ' active' : '') + '" data-wf-idx="' + idx + '" style="flex:' + seg.weight.toFixed(1) + ' 1 0px; min-width:' + minW + 'px; background:' + seg.color + '; display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:9.5px; font-weight:700; color:#fff; font-family:ui-monospace,monospace;" title="' + escapeHtml(tip) + '">' + inlineLabel + '</div>';
+            let inlineLabel = '';
+            if (showInlineText) {
+                const baseLbl = truncate(seg.label, pct >= 18 ? 14 : 8);
+                inlineLabel = escapeHtml((pct >= 20 && seg.ms > 0 && segments.length <= 8) ? (baseLbl + ' · ' + durTxt) : baseLbl);
+            }
+            trackHtml += '<div class="wf-seg' + (isSel ? ' active' : '') + '" data-wf-idx="' + idx + '" style="flex:' + seg.weight.toFixed(1) + ' 1 0px; min-width:' + minW + 'px;' + maxSegStyle + ' background:' + seg.color + '; display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:9.5px; font-weight:700; color:#fff; font-family:ui-monospace,monospace;" title="' + escapeHtml(tip) + '">' + inlineLabel + '</div>';
         });
         trackEl.innerHTML = trackHtml;
 
@@ -7150,7 +7193,7 @@
             }
 
             // The tool's actual output, paired from the following GENERIC step.
-            const timing = parseTiming(data.result, data.step, data.resultStep);
+            const timing = parseTiming(data.result, data.step, data.resultStep, tool.name);
             if (data.running) {
                 text += '<div class="inspector-section"><div class="inspector-label">Result</div>' +
                         '<div style="background:'+warnBg+'; border:1px solid #F9AB00; border-radius:6px; padding:12px; font-size:13px; color:'+warnText+';">' +
@@ -7165,10 +7208,13 @@
                 let durChip = '';
                 if (timing) {
                     const slow = timing.ms >= SLOW_MS;
+                    const tip = timing.approvalWait
+                        ? ('Active execution: ' + formatDuration(timing.ms) + ' (waited ' + formatDuration(timing.rawMs) + ' for user approval/input)')
+                        : 'Time taken by this tool call';
                     durChip = '<span style="margin-left:8px; font-size:11px; font-weight:600; letter-spacing:0; text-transform:none; ' +
                               'padding:2px 7px; border-radius:10px; ' +
                               (slow ? 'background:'+errBg+'; color:'+errText+';' : 'background:var(--secondary,#e8f0fe); color:var(--muted-foreground,#5f6368);') +
-                              '" title="Time taken by this tool call">' + (slow ? 'SLOW · ' : '') + formatDuration(timing.ms) + '</span>';
+                              '" title="' + escapeHtmlRaw(tip) + '">' + (slow ? 'SLOW · ' : '') + formatDuration(timing.ms) + '</span>';
                 }
 
                 text += '<div class="inspector-section"><div class="inspector-label">' +
