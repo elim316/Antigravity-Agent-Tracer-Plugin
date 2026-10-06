@@ -853,6 +853,9 @@
     let edges = new vis.DataSet();
     let rawDataMap = {}; 
     let InitialLayoutDone = false;
+    let lastAutoFollowedMaxX = null;
+    let lastCanvasW = 0;
+    let lastCanvasH = 0;
     let currentZoom = 1.0;
     // Lane offsets from the canvas centre. These were fixed at ±240, which put
     // the tool lane underneath the scrubber whenever the panel was short. Derive
@@ -863,8 +866,56 @@
     let BASE_Y_USER = -240;
     let BASE_Y_TOOL = 240;
 
+    function isCanvasVisible() {
+        const w = document.getElementById('canvas-wrapper');
+        return !!(w && w.clientWidth > 20 && w.clientHeight > 20);
+    }
+
+    function getGraphMaxX() {
+        let maxX = -50;
+        nodes.forEach(n => {
+            if (typeof n.x === 'number' && n.x > maxX) maxX = n.x;
+        });
+        return maxX;
+    }
+
+    function computeTailCameraX() {
+        if (!nodes || nodes.length === 0) return -50;
+        let minX = Infinity, maxX = -Infinity;
+        nodes.forEach(n => {
+            if (typeof n.x !== 'number') return;
+            if (n.x < minX) minX = n.x;
+            if (n.x > maxX) maxX = n.x;
+        });
+        if (maxX === -Infinity) return -50;
+
+        const containerEl = document.getElementById('graph-container') || document.getElementById('canvas-wrapper');
+        const canvasW = (containerEl && containerEl.clientWidth > 40) ? containerEl.clientWidth : 600;
+        const scale = currentZoom || 1.0;
+        const visibleW = canvasW / scale;
+        const NODE_PAD = 145; // half node width + margin so neither side is clipped
+
+        // 1. If the entire trace fits inside the viewport, centre the whole trace
+        if ((maxX - minX) + NODE_PAD * 2 <= visibleW) {
+            return Math.round((minX + maxX) / 2);
+        }
+
+        // 2. If the latest turn fits inside the viewport, centre the latest turn
+        const turns = window.graphTurns || [];
+        const lastTurn = turns.length ? turns[turns.length - 1] : null;
+        if (lastTurn && typeof lastTurn.minX === 'number' && typeof lastTurn.maxX === 'number') {
+            const turnSpan = (lastTurn.maxX - lastTurn.minX) + NODE_PAD * 2;
+            if (turnSpan <= visibleW) {
+                return Math.round((lastTurn.minX + lastTurn.maxX) / 2);
+            }
+        }
+
+        // 3. Otherwise align the right edge of the latest node (+ NODE_PAD) with the right edge of the viewport
+        return Math.round((maxX + NODE_PAD) - (visibleW / 2));
+    }
+
     function laneOffsetFor(height) {
-        if (!height) return 240;
+        if (!height || height <= 20) return 240;
         // Prefer lining up with the CSS band (a third of the height), but the
         // fit constraint wins: a lane pushed off the bottom is worse than a
         // cramped one. The floor only matters on absurdly short panels.
@@ -875,11 +926,13 @@
     // repainting every node for a no-op resize.
     function recomputeLaneGeometry() {
         const w = document.getElementById('canvas-wrapper');
-        const offset = laneOffsetFor(w ? w.clientHeight : 0);
-        if (Math.abs(offset - BASE_Y_TOOL) < 1) return false;
+        const ch = w ? w.clientHeight : 0;
+        if (ch <= 20) return false;
+        const offset = laneOffsetFor(ch);
+        const changed = Math.abs(offset - BASE_Y_TOOL) >= 1;
         BASE_Y_USER = -offset;
         BASE_Y_TOOL = offset;
-        return true;
+        return changed;
     }
     
     function apiUrl(path) {
@@ -1637,6 +1690,7 @@
         edges.clear();
         rawDataMap = {};
         InitialLayoutDone = false;
+        lastAutoFollowedMaxX = null;
         if (window.lastTranscript) updateGraph(window.lastTranscript);
     }
 
@@ -2009,11 +2063,57 @@
     }
 
     // The panel gets resized constantly (dragging the split, collapsing the
-    // inspector). Without this the tool lane keeps whatever offset it had when
-    // the page loaded and slides under the scrubber.
+    // inspector, or transitioning from 0x0 display:none in SidecarIframeHost to visible).
     function handleCanvasResize() {
-        if (!recomputeLaneGeometry()) return;
-        applyLaneGeometry();
+        const w = document.getElementById('canvas-wrapper');
+        const cw = w ? w.clientWidth : 0;
+        const ch = w ? w.clientHeight : 0;
+        if (cw <= 20 || ch <= 20) {
+            lastCanvasW = 0;
+            lastCanvasH = 0;
+            return;
+        }
+        const wasHidden = (lastCanvasW <= 20 || lastCanvasH <= 20);
+        const sizeChanged = (Math.abs(cw - lastCanvasW) > 1 || Math.abs(ch - lastCanvasH) > 1);
+        lastCanvasW = cw;
+        lastCanvasH = ch;
+
+        // When the iframe transitions from hidden (0x0) to visible because the user
+        // clicked into this chat, ensure we sync to the host conversation if not in a subagent drill-down.
+        if (wasHidden) {
+            const hostId = getHostConversationId();
+            if (hostId && manualConvId && manualConvId !== hostId && convStack.length === 0) {
+                manualConvId = null;
+                manualConvLabel = '';
+                updateSessionBreadcrumbUI();
+            }
+            loadData();
+        }
+
+        const geomChanged = recomputeLaneGeometry();
+        if (geomChanged || wasHidden) {
+            applyLaneGeometry();
+        }
+
+        if (network && (wasHidden || sizeChanged || geomChanged)) {
+            try { network.setSize('100%', '100%'); } catch (_) {}
+            if (nodes.length > 0) {
+                if (!InitialLayoutDone || wasHidden) {
+                    InitialLayoutDone = true;
+                    lastAutoFollowedMaxX = getGraphMaxX();
+                    const targetX = autoFollow ? computeTailCameraX() : -50;
+                    network.moveTo({ position: { x: targetX, y: 0 }, scale: currentZoom, animation: false });
+                } else {
+                    const curPos = network.getViewPosition();
+                    const targetX = autoFollow ? computeTailCameraX() : curPos.x;
+                    if (Math.abs(curPos.y) > 1 || (autoFollow && Math.abs(curPos.x - targetX) > 4)) {
+                        network.moveTo({ position: { x: targetX, y: 0 }, scale: currentZoom, animation: false });
+                    }
+                }
+            }
+            try { network.redraw(); } catch (_) {}
+        }
+        renderScrubber();
         syncViewportUI();
     }
     window.addEventListener('resize', handleCanvasResize);
@@ -2055,12 +2155,12 @@
     if (btnJumpEnd) {
         btnJumpEnd.addEventListener('click', () => {
             if (network && nodes.length > 0) {
-                let maxX = -50;
-                nodes.forEach(n => { if (n.x > maxX) maxX = n.x; });
+                const targetX = computeTailCameraX();
+                lastAutoFollowedMaxX = getGraphMaxX();
                 network.moveTo({
-                    position: { x: maxX - 200, y: 0 },
+                    position: { x: targetX, y: 0 },
                     scale: currentZoom,
-                    animation: { duration: 600, easingFunction: 'easeInOutQuad' }
+                    animation: { duration: 500, easingFunction: 'easeInOutQuad' }
                 });
                 
                 // A great UX bonus: Jumping to the tail should instinctively re-enable auto-following!
@@ -2128,7 +2228,10 @@
     setInterval(() => { if (!document.hidden) fetchSubagentsLiveStatus(); }, 6000);
     setInterval(() => { if (!document.hidden) fetchAvailableConversations(); }, 20000);
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) loadData();
+        if (!document.hidden) {
+            handleCanvasResize();
+            loadData();
+        }
     });
     setTimeout(fetchAvailableConversations, 400);
     loadData();
@@ -2141,6 +2244,7 @@
             edges.clear();
             rawDataMap = {};
             InitialLayoutDone = false;
+            lastAutoFollowedMaxX = null;
             emptyStateRendered = false;
             transcriptStore = [];
             currentSessionSubagents = [];
@@ -3098,18 +3202,37 @@
         if (nodesAdded) nodes.add(newNodes);
         if (newEdges.length > 0) edges.add(newEdges);
         
-        if (nodesAdded && !InitialLayoutDone) {
-            InitialLayoutDone = true;
-            setTimeout(() => { network.moveTo({ position: { x: -50, y: 0 }, scale: 1.0, animation: false }); }, 50);
-        } else if (nodesAdded && autoFollow && InitialLayoutDone) {
-            // Find max X to auto-scroll gracefully to the leading edge of the workflow trace!
-            let maxX = -50;
-            nodes.forEach(n => { if (n.x > maxX) maxX = n.x; });
-            network.moveTo({
-                position: { x: maxX - 200, y: 0 },
-                scale: currentZoom,
-                animation: { duration: 600, easingFunction: 'easeInOutQuad' }
-            });
+        if (isCanvasVisible()) {
+            if (recomputeLaneGeometry()) applyLaneGeometry();
+            if (nodesAdded && !InitialLayoutDone) {
+                InitialLayoutDone = true;
+                lastAutoFollowedMaxX = getGraphMaxX();
+                const targetX = autoFollow ? computeTailCameraX() : -50;
+                try { network.setSize('100%', '100%'); } catch (_) {}
+                network.moveTo({ position: { x: targetX, y: 0 }, scale: currentZoom, animation: false });
+                setTimeout(() => {
+                    if (!network || !isCanvasVisible()) return;
+                    const tx = autoFollow ? computeTailCameraX() : -50;
+                    network.moveTo({ position: { x: tx, y: 0 }, scale: currentZoom, animation: false });
+                    syncViewportUI();
+                }, 40);
+            } else if (nodesAdded && autoFollow && InitialLayoutDone) {
+                const curMaxX = getGraphMaxX();
+                const targetX = computeTailCameraX();
+                const curPos = network ? network.getViewPosition() : { x: targetX, y: 0 };
+                if (curMaxX !== lastAutoFollowedMaxX || Math.abs(curPos.y) > 1) {
+                    lastAutoFollowedMaxX = curMaxX;
+                    if (Math.abs(curPos.x - targetX) > 6 || Math.abs(curPos.y) > 1) {
+                        network.moveTo({
+                            position: { x: targetX, y: 0 },
+                            scale: currentZoom,
+                            animation: Math.abs(curPos.x - targetX) > 24
+                                ? { duration: 450, easingFunction: 'easeInOutQuad' }
+                                : false
+                        });
+                    }
+                }
+            }
         }
 
         renderScrubber();
@@ -4362,7 +4485,14 @@
         return '';
     }
 
-    let viewMode = (prefs.viewMode === 'topology' || prefs.viewMode === 'simple_topo') ? prefs.viewMode : 'timeline';
+    const _initUrlParams = new URLSearchParams(window.location.search);
+    const isCompactEmbed = _initUrlParams.get('compact') === '1';
+    const _urlModeParam = _initUrlParams.get('mode');
+    let viewMode = (_urlModeParam === 'topology' || _urlModeParam === 'simple_topo' || _urlModeParam === 'timeline')
+        ? _urlModeParam
+        : (isCompactEmbed
+            ? 'timeline'
+            : ((prefs.viewMode === 'topology' || prefs.viewMode === 'simple_topo') ? prefs.viewMode : 'timeline'));
     let topoScope = prefs.topoScope === 'turn' ? 'turn' : 'all';
     let topoReplaySpeed = (prefs.topoReplaySpeed === 2 || prefs.topoReplaySpeed === 4) ? prefs.topoReplaySpeed : 1;
     let topoClusterState = {};
@@ -4665,9 +4795,11 @@
     if (btnHeaderScopeAll) btnHeaderScopeAll.addEventListener('click', () => setTopoScope('all'));
     if (btnHeaderScopeTurn) btnHeaderScopeTurn.addEventListener('click', () => setTopoScope('turn'));
 
-    function setViewMode(mode) {
+    function setViewMode(mode, persistPref) {
         viewMode = (mode === 'topology' || mode === 'simple_topo') ? mode : 'timeline';
-        savePref('viewMode', viewMode);
+        if (persistPref !== false && !isCompactEmbed) {
+            savePref('viewMode', viewMode);
+        }
         const isAnyTopo = viewMode === 'topology' || viewMode === 'simple_topo';
         document.body.classList.toggle('topology-mode', isAnyTopo);
         if (btnViewTimeline) btnViewTimeline.classList.toggle('active', viewMode === 'timeline');
@@ -4709,9 +4841,9 @@
                 selectedNodeId = topoEvents[topoSelectedEvIdx].nodeId || null;
             }
             setTimeout(() => {
-                if (typeof recomputeLaneGeometry === 'function') recomputeLaneGeometry();
-                if (typeof applyLaneGeometry === 'function') applyLaneGeometry();
-                if (typeof renderScrubber === 'function') { renderScrubber(); updateScrubberViewport(); }
+                lastCanvasW = 0;
+                lastCanvasH = 0;
+                handleCanvasResize();
                 if (selectedNodeId && network && nodes.get(selectedNodeId)) {
                     const n = nodes.get(selectedNodeId);
                     if (network.selectNodes) network.selectNodes([selectedNodeId]);
@@ -4725,10 +4857,11 @@
             }
         }
     }
+    window.setTracerViewMode = function(mode) { setViewMode(mode, false); };
 
-    if (btnViewTimeline) btnViewTimeline.addEventListener('click', () => setViewMode('timeline'));
-    if (btnViewTopology) btnViewTopology.addEventListener('click', () => setViewMode('topology'));
-    if (btnViewSimpleTopo) btnViewSimpleTopo.addEventListener('click', () => setViewMode('simple_topo'));
+    if (btnViewTimeline) btnViewTimeline.addEventListener('click', () => setViewMode('timeline', true));
+    if (btnViewTopology) btnViewTopology.addEventListener('click', () => setViewMode('topology', true));
+    if (btnViewSimpleTopo) btnViewSimpleTopo.addEventListener('click', () => setViewMode('simple_topo', true));
 
     function updatePlayPauseBtnUI() {
         if (!btnTopoPlayPause) return;
@@ -6573,14 +6706,22 @@
         });
     }
 
+    let lastTopoLogCount = -1;
     function renderTopoLogPanel() {
         if (!inspectorEl) return;
+        const wasLogAlreadyShown = topoShowingLog;
+        const prevScrollTop = inspectorEl.scrollTop;
+        const wasNearBottom = !wasLogAlreadyShown || (inspectorEl.scrollHeight - inspectorEl.scrollTop - inspectorEl.clientHeight < 60);
+
         topoShowingLog = true;
         hasSelection = false;
         openInspectorDrawer('Event Propagation Log', false);
 
         const baseEvents = getScopedTopoEvents();
         const visible = topoFilter ? baseEvents.filter(e => e.message_type === topoFilter) : baseEvents;
+        const countChanged = visible.length !== lastTopoLogCount;
+        lastTopoLogCount = visible.length;
+
         let html = '<div id="inspector-title" style="color:var(--primary,#3b82f6); justify-content:space-between;">' +
                    '<span>ARCHITECTURE EVENT LOG (' + visible.length + ')</span>' +
                    (topoFilter ? '<button id="btnClearTopoFilter" style="background:transparent; border:none; color:var(--primary,#3b82f6); font-size:11px; font-weight:700; cursor:pointer;">clear filter</button>' : '') +
@@ -6634,7 +6775,11 @@
                     }
                 });
             });
-            inspectorEl.scrollTop = inspectorEl.scrollHeight;
+            if (countChanged && wasNearBottom) {
+                inspectorEl.scrollTop = inspectorEl.scrollHeight;
+            } else {
+                inspectorEl.scrollTop = prevScrollTop;
+            }
         }
     }
 
@@ -6677,10 +6822,10 @@
         }
     };
 
-    // Initialize view mode from saved preference
+    // Initialize view mode from saved preference (without overwriting localStorage from compact embeds)
     updateScopeSwitchUI();
     if (viewMode === 'topology' || viewMode === 'simple_topo') {
-        setViewMode(viewMode);
+        setViewMode(viewMode, false);
     } else {
         renderTopologySVG();
         renderTopoWaterfall();
