@@ -1,6 +1,6 @@
-# Jetski Agent Tracer Plugin
+# Antigravity Agent Tracer Plugin
 
-[![Platform: Jetski UI Sidecar](https://img.shields.io/badge/Platform-Jetski_UI_Sidecar-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](#)
+[![Platform: Antigravity UI Sidecar](https://img.shields.io/badge/Platform-Antigravity_UI_Sidecar-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](#)
 [![Backend: Python 3 Zero-Dep](https://img.shields.io/badge/Backend-Python_3_(Zero--Dep)-3776AB?style=flat-square&logo=python&logoColor=white)](#how-it-works)
 [![Graph Engine: Vis.js + SVG](https://img.shields.io/badge/Graph_Engine-Vis.js_%2B_SVG_Topology-8E24AA?style=flat-square)](#3-lane-swimlane-architecture)
 [![Streaming: 1.5s Delta Tail](https://img.shields.io/badge/Streaming-1.5s_Delta_Tail-00897B?style=flat-square)](#how-it-works)
@@ -8,34 +8,34 @@
 
 ![Building Trust Through AI Transparency](assets/hero.png)
 
-A dynamic, LangGraph-style trajectory and architecture visualiser for Jetski. This UI plugin renders an agent's real-time workflow across **Timeline**, **Architecture**, and **Simplified** views—translating raw JSONL logs into plain English so both engineers and non-technical stakeholders can see **what was asked**, **how the agent planned**, **which tools and parallel subagents ran**, **where bottlenecks or errors occurred**, and **what was answered**.
+A dynamic, LangGraph-style trajectory and architecture visualiser for Antigravity. This UI plugin renders an agent's real-time workflow across **Timeline**, **Architecture**, and **Simplified** views—translating raw JSONL logs into plain English so both engineers and non-technical stakeholders can see **what was asked**, **how the agent planned**, **which tools and parallel subagents ran**, **where bottlenecks or errors occurred**, and **what was answered**.
 
 ---
 
 ## Quick Start & Installation
 
-### 1. Clone the Plugin into Your Jetski Plugins Directory
+### 1. Clone the Plugin into Your Antigravity Plugins Directory
 
 Run the following commands in your terminal:
 
 ```bash
 mkdir -p ~/.gemini/config/plugins
-git clone https://github.com/elim316/Jetski-Agent-Tracer-Plugin.git ~/.gemini/config/plugins/agent-tracer
+git clone https://github.com/elim316/Antigravity-Agent-Tracer-Plugin.git ~/.gemini/config/plugins/agent-tracer
 ```
 
-### 2. Enable the Plugin in Jetski
+### 2. Enable the Plugin in Antigravity
 
 Enable `agent-tracer-plugin` using either of the following methods:
 
-- **Via the Settings Menu:** Click **Settings** (the gear icon) in Jetski → navigate to **Customizations → Plugins** → locate **`agent-tracer-plugin`** and toggle it **ON**.
-- **Via the `/plugin` Slash Command:** Type `/plugin` in the Jetski chat input (or ask Jetski: *"Enable the `agent-tracer-plugin` plugin"*).
+- **Via the Settings Menu:** Click **Settings** (the gear icon) in Antigravity → navigate to **Customizations → Plugins** → locate **`agent-tracer-plugin`** and toggle it **ON**.
+- **Via the `/plugin` Slash Command:** Type `/plugin` in the Antigravity chat input (or ask Antigravity: *"Enable the `agent-tracer-plugin` plugin"*).
 
 ### 3. Open the Agent Tracer Panel
 
 Once enabled, open the live visualiser panel using any of the following methods:
 
-- **Top-Right Sidecar / Panel Toggle:** Click the **Sidecar / Auxiliary Panel** button in the top-right header bar of the Jetski window and select the **Agent Tracer** tab.
-- **One-Click Chat Pill:** Ask Jetski *"Open Agent Tracer"* (or paste `[Agent Tracer](sidecar://agent-tracer-plugin/tracer/)` in chat) to surface a one-click pill that opens the side panel directly.
+- **Top-Right Sidecar / Panel Toggle:** Click the **Sidecar / Auxiliary Panel** button in the top-right header bar of the Antigravity window and select the **Agent Tracer** tab.
+- **One-Click Chat Pill:** Ask Antigravity *"Open Agent Tracer"* (or paste `[Agent Tracer](sidecar://agent-tracer-plugin/tracer/)` in chat) to surface a one-click pill that opens the side panel directly.
 
 ### Updating
 
@@ -145,7 +145,7 @@ The following table summarises each node type, its swimlane placement, and the t
 
 - **Plain-English inspector:** Click any node for a human-readable summary of what happened, stripped of internal XML envelopes (`<ADDITIONAL_METADATA>`, `<CONTEXT_SUMMARY>`).
 - **Colour-coded file diffs:** Selecting any `replace_file_content` or `write_to_file` step in the inspector renders a colour-coded unified diff (`+` additions in green, `-` removals in red, with line-count badges) directly above the step details.
-- **Model & token telemetry:** When connected to the local Jetski LanguageServer (`/api/telemetry`), the **Session Overview** surfaces the active model name, prompt token count, context-cache hit rate (`% cached`), output and thinking tokens, and estimated session cost.
+- **Model & token telemetry:** When connected to the local Antigravity LanguageServer (`/api/telemetry`), the **Session Overview** surfaces the active model name, prompt token count, context-cache hit rate (`% cached`), output and thinking tokens, and estimated session cost.
 - **Context-aware toolbar & pop-out tab (`↗`):** Switching to **Architecture** or **Simplified** view automatically replaces Timeline-only checkboxes with the **Scope (`This Turn` / `All Turns`)** switch in the header bar. Click **`↗`** in the top-right toolbar at any time to pop Agent Tracer out into a full browser tab.
 - **Multi-format export (`Copy ▾`):** Click **`Copy ▾`** in the toolbar to copy the active turn as a structured **Markdown summary**, copy a **Mermaid `flowchart LR` diagram** of the turn, or download a **full `.json` trace snapshot** for offline analysis.
 - **Result summaries & timing:** Every tool result opens with a one-line outcome headline, stat chips, and wall-clock duration. Click **Slow (>10s)** in the Session Overview (or press `s`) to rank the slowest calls.
@@ -176,12 +176,12 @@ Press `?` in the top toolbar at any time to open the in-app shortcut legend. Sho
 
 ## How It Works
 
-Every time an agent takes a step in Jetski, the runtime appends a JSON record to the conversation's local log (`~/.gemini/jetski/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`). Agent Tracer turns that stream into an interactive visual story in real time:
+Every time an agent takes a step in Antigravity, the runtime appends a JSON record to the conversation's local log (`~/.gemini/antigravity/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`). Agent Tracer turns that stream into an interactive visual story in real time:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant IDE as Jetski Host IDE<br/>(preload.js)
+    participant IDE as Antigravity Host IDE<br/>(preload.js)
     participant UI as Tracer Frontend<br/>(index.html + Vis.js / SVG)
     participant Srv as Python Sidecar<br/>(server.py)
     participant Log as Local Brain Logs<br/>(transcript*.jsonl)
@@ -210,7 +210,7 @@ The repository is organised as follows:
 
 ```text
 agent-tracer/
-├── plugin.json                 # Jetski plugin manifest (name, version, sidecar mount)
+├── plugin.json                 # Antigravity plugin manifest (name, version, sidecar mount)
 ├── README.md                   # Quick Start, enablement guide, architecture diagrams & legends
 ├── assets/
 │   └── hero.png                # Banner graphic
