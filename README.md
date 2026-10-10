@@ -1,5 +1,6 @@
 # Antigravity Agent Tracer Plugin
 
+[![Live Sandbox: Try in Browser](https://img.shields.io/badge/Live_Sandbox-Try_in_Browser_%E2%86%97-0066CC?style=flat-square)](https://elim316.github.io/sandbox/agent-tracer/)
 [![Platform: Antigravity UI Sidecar](https://img.shields.io/badge/Platform-Antigravity_UI_Sidecar-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](#)
 [![Backend: Python 3 Zero-Dep](https://img.shields.io/badge/Backend-Python_3_(Zero--Dep)-3776AB?style=flat-square&logo=python&logoColor=white)](#how-it-works)
 [![Graph Engine: Vis.js + SVG](https://img.shields.io/badge/Graph_Engine-Vis.js_%2B_SVG_Topology-8E24AA?style=flat-square)](#3-lane-swimlane-architecture)
@@ -7,6 +8,8 @@
 [![Audience: Builders & Non-Coders](https://img.shields.io/badge/Audience-Builders_%26_Non--Coders-F57C00?style=flat-square)](#visual-node--status-legend)
 
 ![Building Trust Through AI Transparency](assets/hero.png)
+
+Interactive Demo: [Launch Live Browser Sandbox (Zero Install)](https://elim316.github.io/sandbox/agent-tracer/)
 
 A dynamic, LangGraph-style trajectory and architecture visualiser for Antigravity. This UI plugin renders an agent's real-time workflow across **Timeline**, **Architecture**, and **Simplified** views—translating raw JSONL logs into plain English so both engineers and non-technical stakeholders can see **what was asked**, **how the agent planned**, **which tools and parallel subagents ran**, **where bottlenecks or errors occurred**, and **what was answered**.
 
