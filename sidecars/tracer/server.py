@@ -1099,7 +1099,8 @@ if __name__ == "__main__":
     t = threading.Thread(target=_background_maintenance_loop, daemon=True)
     t.start()
 
-    server = ThreadedTracerServer(("0.0.0.0", PORT), AgentTracerHandler)
+    bind_host = os.environ.get("ANTIGRAVITY_SIDECAR_HOST") or "127.0.0.1"
+    server = ThreadedTracerServer((bind_host, PORT), AgentTracerHandler)
     actual_port = server.server_address[1]
     print(f"PORT={actual_port}", flush=True)
     try:
